@@ -1,0 +1,59 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
+
+jobs:
+  # Build job
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+      - name: Build hightable demo
+        working-directory: hightable
+        run: |
+          npm i
+          npm run build
+      - name: Build hyparquet demo
+        working-directory: hyparquet
+        run: |
+          npm i
+          npm run build
+      - name: Move the build outputs to a folder
+        run: |
+          mkdir -p build_outputs_folder
+          echo "<h1 id="hyparam">Hyperparam</h1>" > build_outputs_folder/index.html
+          echo "<ul>" >> build_outputs_folder/index.html
+          echo "<li><a href="./hyparquet">hyparquet demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./hightable">hightable demo</a></li>" >> build_outputs_folder/index.html
+          echo "</ul>" >> build_outputs_folder/index.html
+          echo "<h1 id="hyparam">Hyperparam</h1>" > build_outputs_folder/index.html
+          echo "<ul>" >> build_outputs_folder/index.html
+          echo "<li><a href="./hyparquet">hyparquet demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./hightable">hightable demo</a></li>" >> build_outputs_folder/index.html
+          echo "</ul>" >> build_outputs_folder/index.html
+          mv hyparquet/dist build_outputs_folder/hyparquet
+          mv hightable/dist build_outputs_folder/hightable
+      - name: Upload static files as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build_outputs_folder/
+
+  # Deploy job
+  deploy:
+    needs: build
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

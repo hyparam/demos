@@ -1,0 +1,15 @@
+name: hyparquet-demo
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    paths:
+      - 'packages/components/**'
+      - 'hyparquet/**'
+      - '.github/workflows/_common_jobs.yml'
+      - '.github/workflows/ci_hyparquet_demo.yml'
+jobs:
+  ci:
+    uses: ./.github/workflows/_common_jobs.yml
+    with:
+      workspace: hyparquet

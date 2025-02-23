@@ -6,9 +6,13 @@ import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage/'] },
+  { ignores: ['dist', 'coverage', 'node_modules'] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.strictTypeChecked, ...tseslint.configs.stylisticTypeChecked],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.strictTypeChecked,
+      ...tseslint.configs.stylisticTypeChecked
+    ],
     // Set the react version
     settings: { react: { version: '18.3' } },
     files: ['src/**/*.{ts,tsx}'],

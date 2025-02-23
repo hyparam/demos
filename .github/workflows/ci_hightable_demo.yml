@@ -1,0 +1,14 @@
+name: hightable-demo
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    paths:
+      - 'hightable/**'
+      - '.github/workflows/_common_jobs.yml'
+      - '.github/workflows/ci_hightable_demo.yml'
+jobs:
+  ci:
+    uses: ./.github/workflows/_common_jobs.yml
+    with:
+      workspace: hightable

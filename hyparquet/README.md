@@ -5,7 +5,6 @@ This is an example project showing how to use [hyparquet](https://github.com/hyp
 ## Build
 
 ```bash
-cd apps/hyparquet-demo
 npm i
 npm run build
 ```

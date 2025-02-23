@@ -5,7 +5,6 @@ This is an example project showing how to use [hightable](https://github.com/hyp
 ## Build
 
 ```bash
-cd apps/hightable-demo
 npm i
 npm run build
 ```
