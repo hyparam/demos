@@ -1,42 +1,42 @@
 * {
   box-sizing: border-box;
-}
-body {
-  display: flex;
   font-family: 'Mulish', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
+}
+body {
+  display: flex;
 }
 
 /* sidebar */
 nav.sidebar {
   height: 100vh;
   width: 48px;
-  background-image: linear-gradient(to bottom, #667, #585669);
-  box-shadow: 0 0 4px rgba(10, 10, 10, 0.5);
+  background-image: linear-gradient(to bottom, #f2f2f2, #e4e4e4);
+  box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
 }
 
 /* brand logo */
 .brand {
-  color: #fff;
-  display: flex;
   align-items: center;
-  filter: drop-shadow(0 0 2px #444);
+  color: #111;
+  display: flex;
+  filter: drop-shadow(0 0 2px #666);
   font-family: 'Century Gothic', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 1.1em;
   font-weight: bold;
-  text-orientation: mixed;
-  opacity: 0.85;
+  opacity: 0.9;
   padding: 10px 12px;
+  text-decoration: none;
+  text-orientation: mixed;
   user-select: none;
   writing-mode: vertical-rl;
-  text-decoration: none;
 }
 .brand:hover {
-  color: #fff;
-  filter: drop-shadow(0 0 2px #333);
-  opacity: 0.9;
+  color: #111;
+  filter: drop-shadow(0 0 2px #444);
+  opacity: 1;
   text-decoration: none;
 }
 .brand::before {
@@ -52,10 +52,6 @@ nav.sidebar {
   height: 100vh;
   display: flex;
   flex: 1;
-}
-
-.table-corner {
-  background: url('https://hyperparam.app/assets/table/hightable.svg') #e4e4e6 no-repeat center 6px;
 }
 
 .layout {
@@ -99,4 +95,8 @@ nav.sidebar {
   margin: 1em;
   display: flex;
   gap: 0.5em;
+}
+
+.table-corner {
+  background: url('https://hyperparam.app/assets/table/hightable.svg') #f9f4ff no-repeat center 6px;
 }
