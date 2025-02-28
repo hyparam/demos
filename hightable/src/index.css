@@ -8,21 +8,42 @@ body {
   display: flex;
 }
 
+button {
+  background-color: transparent;
+  border: 1px solid #666;
+  color: #222;
+  border-radius: 8px;
+  padding: 0 8px;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.2s ease-in-out;
+}
+button:active,
+button:focus,
+button:hover {
+  background-color: #eee;
+}
+
 /* sidebar */
 nav.sidebar {
   height: 100vh;
   width: 48px;
+  height: 100vh;
+}
+nav.sidebar > div {
   background-image: linear-gradient(to bottom, #f2f2f2, #e4e4e4);
   box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
+  position: absolute;
+  width: 48px;
+  z-index: 30;
 }
-
 /* brand logo */
 .brand {
   align-items: center;
   color: #111;
   display: flex;
-  filter: drop-shadow(0 0 2px #666);
+  filter: drop-shadow(0 0 2px #bbb);
   font-family: 'Century Gothic', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   font-size: 1.1em;
   font-weight: bold;
@@ -35,7 +56,7 @@ nav.sidebar {
 }
 .brand:hover {
   color: #111;
-  filter: drop-shadow(0 0 2px #444);
+  filter: drop-shadow(0 0 2px #afa6b9);
   opacity: 1;
   text-decoration: none;
 }
@@ -60,6 +81,7 @@ nav.sidebar {
   flex-direction: column;
 }
 
+/* Top bar */
 .topbar {
   background-color: #fff;
   box-shadow: 0 1px 2px rgba(10, 10, 10, 0.1);
@@ -75,14 +97,23 @@ nav.sidebar {
 .topbar .title {
   color: #444;
   font-weight: bold;
+  margin-right: 10px;
 }
 .topbar .link {
   color: #888;
   cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
 }
+.topbar .link:active,
+.topbar .link:focus,
+.topbar .link:hover {
+  color: #556;
+}
+
 .topbar .link.active {
-  color: #706fb1;
-  font-weight: bold;
+  color: #556;
+  text-decoration: underline;
 }
 
 .content {
@@ -98,5 +129,6 @@ nav.sidebar {
 }
 
 .table-corner {
+  align-items: center;
   background: url('https://hyperparam.app/assets/table/hightable.svg') #f9f4ff no-repeat center 6px;
 }

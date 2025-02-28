@@ -4,7 +4,7 @@ import { NavLink } from 'react-router'
 export default function Layout({ children }: { children: ReactNode }) {
   return <div className="layout">
     <nav className="topbar">
-      <span className="title">HighTable demos</span>
+      <span className="title">HighTable Demos</span>
       {/* NavLink makes it easy to show active states */}
       {
         [
