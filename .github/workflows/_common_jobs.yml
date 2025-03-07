@@ -6,15 +6,15 @@ on:
         required: true
         type: string
 jobs:
-  # lint:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ${{ inputs.workspace }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - run: npm i
-  #     - run: npm run lint
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm i
+      - run: npm run lint
   
   typecheck:
     runs-on: ubuntu-latest

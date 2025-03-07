@@ -14,7 +14,7 @@ const header = ['ID', 'Name', 'Age', 'UUID', 'Text', 'JSON']
 const mockData = {
   header,
   numRows: 10000,
-  rows({start, end}: {start: number, end: number}) {
+  rows({ start, end }: { start: number, end: number }) {
     const arr: AsyncRow[] = []
     for (let i = start; i < end; i++) {
       const rand = Math.abs(Math.sin(i + 1))
