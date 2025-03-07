@@ -1,4 +1,4 @@
-import { ErrorBar, cn } from '@hyparam/components'
+import { ErrorBar, cn } from 'hyperparam'
 import { ReactNode, useEffect } from 'react'
 
 interface LayoutProps {

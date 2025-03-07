@@ -1,4 +1,4 @@
-import { cn } from '@hyparam/components'
+import { cn } from 'hyperparam'
 import { ReactNode, useEffect, useRef, useState } from 'react'
 
 interface DropdownProps {
