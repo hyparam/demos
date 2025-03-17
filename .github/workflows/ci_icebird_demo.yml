@@ -1,15 +1,15 @@
-name: hyparquet-demo
+name: icebird-demo
 on:
   workflow_dispatch:
   push:
     branches: ["master"]
   pull_request:
     paths:
-      - 'hyparquet/**'
+      - 'icebird/**'
       - '.github/workflows/_common_jobs.yml'
-      - '.github/workflows/ci_hyparquet_demo.yml'
+      - '.github/workflows/ci_icebird_demo.yml'
 jobs:
   ci:
     uses: ./.github/workflows/_common_jobs.yml
     with:
-      workspace: hyparquet
+      workspace: icebird
