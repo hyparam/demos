@@ -13,6 +13,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           ['Controlled', '/controlled'],
           ['Mirror', '/mirror'],
           ['Unstyled', '/unstyled'],
+          ['Custom Theme', '/custom-theme'],
         ].map(([label, path]) => <NavLink key={path} to={path}
           className={ ({ isActive }) => isActive ? 'link active' : 'link' }
         >{label}</NavLink>,
