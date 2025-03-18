@@ -78,6 +78,13 @@ export default tseslint.config(
 
       '@typescript-eslint/restrict-template-expressions': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
+
+      // allow using any - see row.ts - it's not easy to replace with unknown for example
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
+      '@typescript-eslint/prefer-promise-reject-errors': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     },
   },
 )

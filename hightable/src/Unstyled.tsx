@@ -1,4 +1,4 @@
-import { HighTable } from 'hightable'
+import { HighTable, Selection } from 'hightable'
 import { useState } from 'react'
 import { data } from './data'
 import Layout from './Layout'
