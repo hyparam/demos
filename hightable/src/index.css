@@ -128,7 +128,7 @@ nav.sidebar > div {
   gap: 0.5em;
 }
 
-.table-corner {
+thead td:first-child {
   align-items: center;
   background: url('https://hyperparam.app/assets/table/hightable.svg') #f9f4ff no-repeat center 6px;
 }
