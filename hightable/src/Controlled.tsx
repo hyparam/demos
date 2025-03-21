@@ -25,7 +25,8 @@ function createRandomSelection(): Selection {
 function createRandomOrderBy(): OrderBy {
   const columns = data.header
   const column = columns[Math.floor(Math.random() * columns.length)]
-  return { column }
+  const direction = Math.random() < 0.5 ? 'ascending' : 'descending'
+  return [{ column, direction }]
 }
 
 function getNumSelected(selection: Selection): number {
@@ -34,7 +35,7 @@ function getNumSelected(selection: Selection): number {
 
 export default function Controlled() {
   const [selection, setSelection] = useState<Selection>({ ranges: [] })
-  const [orderBy, setOrderBy] = useState<OrderBy>({})
+  const [orderBy, setOrderBy] = useState<OrderBy>([])
 
   const numSelectedRows = getNumSelected(selection)
 
@@ -47,8 +48,8 @@ export default function Controlled() {
       </section>
       <section>
         <button onClick={() => { setOrderBy(createRandomOrderBy()) }}>Order by a random column</button>
-        <button onClick={() => { setOrderBy({}) }}>Clear order</button>
-        <span>{orderBy.column ? `Ordered by '${orderBy.column}'` : 'Unordered'}</span>
+        <button onClick={() => { setOrderBy([]) }}>Clear order</button>
+        <span>{orderBy[0]?.column ? `Ordered by '${orderBy[0]?.column}'` : 'Unordered'}</span>
       </section>
     </div>
     <HighTable data={data} selection={selection} onSelectionChange={setSelection} orderBy={orderBy} onOrderByChange={setOrderBy} />

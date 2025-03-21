@@ -3,8 +3,10 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter, Route, Routes } from 'react-router'
 import Basic from './Basic.js'
 import Controlled from './Controlled.js'
+import CustomTheme from './CustomTheme.js'
 import Mirror from './Mirror.js'
 import Selection from './Selection.js'
+import Unstyled from './Unstyled.js'
 import './index.css'
 
 const app = document.getElementById('app')
@@ -15,5 +17,7 @@ ReactDOM.createRoot(app).render(<HashRouter>
     <Route path="/selection" element={<Selection />} />
     <Route path="/controlled" element={<Controlled />} />
     <Route path="/mirror" element={<Mirror />} />
+    <Route path="/unstyled" element={<Unstyled />} />
+    <Route path="/custom-theme" element={<CustomTheme />} />
   </Routes>
 </HashRouter>)

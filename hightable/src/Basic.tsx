@@ -5,6 +5,6 @@ import { data } from './data'
 
 export default function Basic() {
   return <Layout>
-    <HighTable data={data} />
+    <HighTable data={data} cacheKey="demo" />
   </Layout>
 }

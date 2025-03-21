@@ -5,7 +5,7 @@ import { data } from './data'
 
 export default function App() {
   const [selection, setSelection] = useState<Selection>({ ranges: [] })
-  const [orderBy, setOrderBy] = useState<OrderBy>({})
+  const [orderBy, setOrderBy] = useState<OrderBy>([])
 
   return <Layout>
     <HighTable data={data} cacheKey='demo' onSelectionChange={setSelection} onOrderByChange={setOrderBy} />
