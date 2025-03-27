@@ -14,10 +14,10 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "hyperparam": "0.2.26",
+    "hyperparam": "0.2.27",
     "hightable": "0.13.1",
-    "hyparquet": "1.9.1",
-    "hyparquet-compressors": "1.0.0",
+    "hyparquet": "1.10.1",
+    "hyparquet-compressors": "1.1.1",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
