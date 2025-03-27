@@ -34,7 +34,7 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
         {byteLength && <button onClick={() => { setLens('layout') }}>Layout</button>}
       </Dropdown>
     </div>
-    {lens === 'table' && <HighTable cacheKey={name} data={df} onError={setError} />}
+    {lens === 'table' && <HighTable cacheKey={name} data={df} onError={setError} className="hightable" />}
     {lens === 'metadata' && <ParquetMetadata metadata={metadata} />}
     {lens === 'layout' && byteLength && <ParquetLayout byteLength={byteLength} metadata={metadata} />}
   </>

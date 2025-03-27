@@ -432,10 +432,8 @@ input[type="file"] {
   text-align: right;
 }
 
-.table-corner {
+.hightable thead td:first-child {
   background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center 6px;
-}
-.table thead th:first-child {
   min-width: 0;
   width: 0;
 }
