@@ -1,4 +1,6 @@
 import 'hightable/src/HighTable.css'
+import 'hyperparam/global.css'
+import 'hyperparam/hyperparam.css'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.js'
