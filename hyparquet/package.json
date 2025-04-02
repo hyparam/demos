@@ -14,8 +14,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "hyperparam": "0.2.30",
-    "hightable": "0.13.3",
+    "hyperparam": "0.2.31",
+    "hightable": "0.13.4",
     "hyparquet": "1.10.2",
     "hyparquet-compressors": "1.1.1",
     "react": "18.3.1",
