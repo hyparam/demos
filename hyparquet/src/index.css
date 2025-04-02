@@ -294,6 +294,7 @@ button.close-button:hover {
   z-index: 20;
 }
 .dropdown-content > button {
+  color: inherit;
   background: none;
   border: none;
   cursor: pointer;
