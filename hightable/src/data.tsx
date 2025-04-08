@@ -1,4 +1,4 @@
-import { AsyncRow, rowCache, sortableDataFrame, wrapPromise } from 'hightable'
+import { AsyncRow, rowCache, sortableDataFrame, wrapPromise, wrapResolved } from 'hightable'
 
 function lorem(rand: number, length: number): string {
   const words = 'lorem ipsum dolor sit amet consectetur adipiscing elit'.split(' ')
@@ -33,7 +33,7 @@ const mockData = {
         [key, wrapPromise(delay(value, 100 * Math.floor(10 * Math.random())))],
       ))
       arr.push({
-        index: wrapPromise(i),
+        index: wrapResolved(i),
         cells,
       })
     }
