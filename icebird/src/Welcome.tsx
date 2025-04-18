@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ChangeEvent, FormEvent, ReactNode, useCallback, useState } from 'react'
 
 const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/spark/bunnies'
 
@@ -7,16 +7,20 @@ interface Props {
 }
 
 export default function Welcome({ setTableUrl }: Props): ReactNode {
-  function clickLoad() {
+  const [url, setUrl] = useState('')
+
+  const onUrlChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value)
+  }, [])
+
+  function clickLoad(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
     // Update url with key
-    const input = document.querySelector('input')
-    if (input instanceof HTMLInputElement) {
-      const url = input.value === '' ? exampleUrl : input.value
-      const params = new URLSearchParams(location.search)
-      params.set('key', url)
-      history.pushState({}, '', `${location.pathname}?${params}`)
-      setTableUrl(url)
-    }
+    const key = url === '' ? exampleUrl : url
+    const params = new URLSearchParams(location.search)
+    params.set('key', key)
+    history.pushState({}, '', `${location.pathname}?${params}`)
+    setTableUrl(key)
   }
 
   return <div id="welcome">
@@ -32,13 +36,13 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
         Uses <a href="https://github.com/hyparam/hyparquet">hyparquet</a> for parquet file reading.
         Uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance windowed table viewing.
       </p>
-      <p>
-        Enter a URL to a public iceberg table:
-      </p>
-      <div className="inputGroup">
-        <input type="text" placeholder={exampleUrl}/>
-        <button onClick={clickLoad}>Load</button>
-      </div>
+      <form onSubmit={clickLoad}>
+        <label htmlFor="url">Enter a URL to a public iceberg table:</label>
+        <div className="inputGroup">
+          <input id="url" type="url" required={false} placeholder={exampleUrl} value={url} onChange={onUrlChange} />
+          <button>Load</button>
+        </div>
+      </form>
     </div>
   </div>
 }
