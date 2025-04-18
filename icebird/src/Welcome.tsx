@@ -11,13 +11,9 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
 
   const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // Update url with key
     const url = urlRef.current?.value ?? ''
-    const key = url === '' ? exampleUrl : url
-    const params = new URLSearchParams(location.search)
-    params.set('key', key)
-    history.pushState({}, '', `${location.pathname}?${params}`)
-    setTableUrl(key)
+    const tableUrl = url === '' ? exampleUrl : url
+    setTableUrl(tableUrl)
   }, [setTableUrl, urlRef])
 
   return <div id="welcome">

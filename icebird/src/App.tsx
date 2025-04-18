@@ -49,7 +49,7 @@ export default function App(): ReactNode {
     }).catch(setUnknownError)
   }, [tableUrl, versions, version, setUnknownError])
 
-  const onUrlDrop = useCallback(
+  const setUrlAndHistory = useCallback(
     (url: string) => {
       // Add key=url to query string
       const params = new URLSearchParams(location.search)
@@ -60,14 +60,8 @@ export default function App(): ReactNode {
     [setTableUrl],
   )
 
-  useEffect(() => {
-    if (!pageProps && tableUrl) {
-      onUrlDrop(tableUrl)
-    }
-  }, [tableUrl, pageProps, onUrlDrop])
-
   return <Layout error={error}>
-    {pageProps ? <Page {...pageProps} /> : <Welcome setTableUrl={setTableUrl} />}
+    {pageProps ? <Page {...pageProps} /> : <Welcome setTableUrl={setUrlAndHistory} />}
   </Layout>
 }
 
