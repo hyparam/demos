@@ -13,7 +13,7 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
     setUrl(e.target.value)
   }, [])
 
-  function clickLoad(e: FormEvent<HTMLFormElement>) {
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     // Update url with key
     const key = url === '' ? exampleUrl : url
@@ -36,7 +36,7 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
         Uses <a href="https://github.com/hyparam/hyparquet">hyparquet</a> for parquet file reading.
         Uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance windowed table viewing.
       </p>
-      <form onSubmit={clickLoad}>
+      <form onSubmit={onSubmit}>
         <label htmlFor="url">Enter a URL to a public iceberg table:</label>
         <div className="inputGroup">
           <input id="url" type="url" required={false} placeholder={exampleUrl} value={url} onChange={onUrlChange} />
