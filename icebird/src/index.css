@@ -29,6 +29,10 @@ h2 {
 p {
   margin: 15px 0;
 }
+label {
+  margin: 15px 0;
+  display: block;
+}
 code {
   font-family: monospace;
   padding: 10px;

@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { FormEvent, ReactNode, useCallback, useRef } from 'react'
 
 const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/spark/bunnies'
 
@@ -7,17 +7,14 @@ interface Props {
 }
 
 export default function Welcome({ setTableUrl }: Props): ReactNode {
-  function clickLoad() {
-    // Update url with key
-    const input = document.querySelector('input')
-    if (input instanceof HTMLInputElement) {
-      const url = input.value === '' ? exampleUrl : input.value
-      const params = new URLSearchParams(location.search)
-      params.set('key', url)
-      history.pushState({}, '', `${location.pathname}?${params}`)
-      setTableUrl(url)
-    }
-  }
+  const urlRef = useRef<HTMLInputElement>(null)
+
+  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const url = urlRef.current?.value ?? ''
+    const tableUrl = url === '' ? exampleUrl : url
+    setTableUrl(tableUrl)
+  }, [setTableUrl, urlRef])
 
   return <div id="welcome">
     <div>
@@ -32,13 +29,13 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
         Uses <a href="https://github.com/hyparam/hyparquet">hyparquet</a> for parquet file reading.
         Uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance windowed table viewing.
       </p>
-      <p>
-        Enter a URL to a public iceberg table:
-      </p>
-      <div className="inputGroup">
-        <input type="text" placeholder={exampleUrl}/>
-        <button onClick={clickLoad}>Load</button>
-      </div>
+      <form onSubmit={onSubmit}>
+        <label htmlFor="url">Enter a URL to a public iceberg table:</label>
+        <div className="inputGroup">
+          <input id="url" type="url" ref={urlRef} required={false} placeholder={exampleUrl} />
+          <button>Load</button>
+        </div>
+      </form>
     </div>
   </div>
 }
