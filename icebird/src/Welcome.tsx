@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, ReactNode, useCallback, useState } from 'react'
+import { FormEvent, ReactNode, useCallback, useRef } from 'react'
 
 const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/spark/bunnies'
 
@@ -7,21 +7,18 @@ interface Props {
 }
 
 export default function Welcome({ setTableUrl }: Props): ReactNode {
-  const [url, setUrl] = useState('')
+  const urlRef = useRef<HTMLInputElement>(null)
 
-  const onUrlChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
-    setUrl(e.target.value)
-  }, [])
-
-  function onSubmit(e: FormEvent<HTMLFormElement>) {
+  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     // Update url with key
+    const url = urlRef.current?.value ?? ''
     const key = url === '' ? exampleUrl : url
     const params = new URLSearchParams(location.search)
     params.set('key', key)
     history.pushState({}, '', `${location.pathname}?${params}`)
     setTableUrl(key)
-  }
+  }, [setTableUrl, urlRef])
 
   return <div id="welcome">
     <div>
@@ -39,7 +36,7 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
       <form onSubmit={onSubmit}>
         <label htmlFor="url">Enter a URL to a public iceberg table:</label>
         <div className="inputGroup">
-          <input id="url" type="url" required={false} placeholder={exampleUrl} value={url} onChange={onUrlChange} />
+          <input id="url" type="url" ref={urlRef} required={false} placeholder={exampleUrl} />
           <button>Load</button>
         </div>
       </form>
