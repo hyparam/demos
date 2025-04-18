@@ -1,5 +1,5 @@
 import { ErrorBar, cn } from 'hyperparam'
-import { ReactNode, useEffect } from 'react'
+import { ReactNode } from 'react'
 
 interface LayoutProps {
   children: ReactNode
@@ -20,12 +20,8 @@ interface LayoutProps {
  * @returns {ReactNode}
  */
 export default function Layout({ children, className, progress, error }: LayoutProps): ReactNode {
-  // Update title
-  useEffect(() => {
-    document.title = 'Icebird: Apache Iceberg table viewer online'
-  }, [])
-
   return <>
+    <head>Icebird: Apache Iceberg table viewer online</head>
     <div className='content-container'>
       <div className={cn('content', className)}>
         {children}
