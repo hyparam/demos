@@ -1,6 +1,6 @@
 import HighTable, { DataFrame } from 'hightable'
-import { ReactNode } from 'react'
 import { IcebergMetadata } from 'icebird/src/types.js'
+import { ReactNode } from 'react'
 import Dropdown from './Dropdown'
 
 export interface PageProps {
@@ -28,6 +28,7 @@ export default function Page({ df, metadata, versions, version, setVersion, setE
         {versions.map(v => <button key={v} onClick={() => { setVersion(v) }}>{v}</button>)}
       </Dropdown>
     </div>
+    {/* The same cacheKey is used for all iceberg versions, preserving the column widths */}
     <HighTable cacheKey={name} className='hightable' data={df} onError={setError} />
   </>
 }
