@@ -1,7 +1,7 @@
 import HighTable, { DataFrame } from 'hightable'
 import { FileMetaData } from 'hyparquet'
+import { Dropdown } from 'hyperparam'
 import { ReactNode, useState } from 'react'
-import Dropdown from './Dropdown.js'
 import ParquetLayout from './ParquetLayout.js'
 import ParquetMetadata from './ParquetMetadata.js'
 
