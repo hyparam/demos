@@ -4,7 +4,7 @@ import Welcome from './Welcome.js'
 
 import { DataFrame, asyncRows, rowCache, sortableDataFrame } from 'hightable'
 import { icebergListVersions, icebergMetadata, icebergRead } from 'icebird'
-import { IcebergMetadata, Snapshot } from 'icebird/src/types.js'
+import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import { useCallback, useEffect, useState } from 'react'
 import Layout from './Layout.js'
 
@@ -43,7 +43,7 @@ export default function App(): ReactNode {
     if (!tableUrl || !versions || !version) return
     // Get the metadata from the iceberg table
     const metadataFileName = `${version}.metadata.json`
-    icebergMetadata({ tableUrl: tableUrl, metadataFileName }).then((metadata: IcebergMetadata) => {
+    icebergMetadata({ tableUrl: tableUrl, metadataFileName }).then((metadata: TableMetadata) => {
       const df = icebergDataFrame(tableUrl, metadataFileName, metadata)
       setPageProps({ df, metadata, versions, version, setVersion, setError })
     }).catch(setUnknownError)
@@ -65,10 +65,9 @@ export default function App(): ReactNode {
   </Layout>
 }
 
-function icebergDataFrame(tableUrl: string, metadataFileName: string, metadata: IcebergMetadata): DataFrame {
-  if (metadata.snapshots.length === 0) {
-    throw new Error('No iceberg snapshots found')
-  }
+function icebergDataFrame(tableUrl: string, metadataFileName: string, metadata: TableMetadata): DataFrame {
+  if (!metadata.snapshots?.length) throw new Error('No iceberg snapshots found')
+
   const snapshot: Snapshot = metadata.snapshots[metadata.snapshots.length - 1]
   // Warning: this is not exactly the number of rows
   const numRows = Number(snapshot.summary['total-records'])

@@ -1,11 +1,11 @@
 import HighTable, { DataFrame } from 'hightable'
-import { IcebergMetadata } from 'icebird/src/types.js'
-import { ReactNode } from 'react'
+import type { TableMetadata } from 'icebird/src/types.js'
+import type { ReactNode } from 'react'
 import Dropdown from './Dropdown'
 
 export interface PageProps {
   df: DataFrame
-  metadata: IcebergMetadata
+  metadata: TableMetadata
   versions: string[]
   version: string
   setVersion: (version: string) => void
