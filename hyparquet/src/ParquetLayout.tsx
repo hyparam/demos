@@ -1,5 +1,5 @@
-import { FileMetaData } from 'hyparquet'
-import { ReactNode } from 'react'
+import type { ColumnChunk, ColumnMetaData, FileMetaData } from 'hyparquet'
+import type { ReactNode } from 'react'
 
 interface LayoutProps {
   byteLength: number
@@ -62,9 +62,6 @@ function RowGroups({ metadata }: { metadata: FileMetaData }) {
   </>
 }
 
-type ColumnChunk = FileMetaData['row_groups'][number]['columns'][number]
-type ColumnMetadata = NonNullable<ColumnChunk['meta_data']>
-
 function Column({ key, column }: { key: number, column: ColumnChunk }) {
 
   if (!column.meta_data) return null
@@ -78,7 +75,7 @@ function Column({ key, column }: { key: number, column: ColumnChunk }) {
     { name: 'End', offset: end },
   ]
     .filter((page): page is {name: string, offset: bigint} => page.offset !== undefined)
-    .sort((a, b) => Number(a.offset) - Number(b.offset))
+    .sort((a, b) => Number(a.offset - b.offset))
 
   const children = pages.slice(0, -1).map(({ name, offset }, index) =>
     <Cell key={name} name={name} start={offset} end={pages[index + 1].offset} />,
@@ -127,7 +124,7 @@ function ColumnIndexes({ metadata }: { metadata: FileMetaData }) {
  * @param {ColumnMetaData} columnMetadata
  * @returns {[bigint, bigint]} byte offset range
  */
-function getColumnRange({ dictionary_page_offset, data_page_offset, total_compressed_size }: ColumnMetadata): [bigint, bigint] {
+function getColumnRange({ dictionary_page_offset, data_page_offset, total_compressed_size }: ColumnMetaData): [bigint, bigint] {
   /// Copied from hyparquet because it's not exported
   let columnOffset = dictionary_page_offset
   if (!columnOffset || data_page_offset < columnOffset) {
