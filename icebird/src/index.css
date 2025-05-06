@@ -178,81 +178,6 @@ main {
   overflow-y: auto;
 }
 
-/* dropdown */
-.dropdown {
-  display: inline-block;
-  position: relative;
-  text-overflow: ellipsis;
-  user-select: none;
-  white-space: nowrap;
-}
-
-.dropdown-button,
-.dropdown-button:active,
-.dropdown-button:focus,
-.dropdown-button:hover {
-  align-items: center;
-  background: transparent;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  display: flex;
-  font-size: inherit;
-  height: 24px;
-  max-width: 300px;
-  outline: none;
-  overflow-x: hidden;
-  padding: 0;
-}
-/* dropdown caret */
-.dropdown-button::before {
-  content: "\25bc";
-  display: inline-block;
-  font-size: 10px;
-  margin-right: 4px;
-  transform: rotate(-90deg);
-  transition: transform 0.1s;
-}
-.open .dropdown-button::before {
-  transform: rotate(0deg);
-}
-/* dropdown menu options */
-.dropdown-content {
-  background-color: #eee;
-  position: absolute;
-  left: 0;
-  border-radius: 6px;
-  box-shadow: 0px 4px 8px 0px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  max-height: 0;
-  max-width: 200px;
-  min-width: 120px;
-  transition: max-height 0.1s ease-out;
-  overflow-y: auto;
-  z-index: 20;
-}
-.dropdown-content > button {
-  background: none;
-  border: none;
-  border-radius: 0;
-  color: inherit;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 8px 16px;
-  text-align: left;
-}
-/* dropdown menu options hover */
-.dropdown-content > button:active,
-.dropdown-content > button:focus,
-.dropdown-content > button:hover {
-  background-color: rgba(31, 30, 33, 0.1);
-}
-/* roll out dropdown menu */
-.open .dropdown-content {
-  max-height: 170px;
-}
-
 /* welcome */
 #welcome {
   display: flex;
@@ -323,4 +248,11 @@ main {
   min-width: 0;
   text-overflow: clip;
   width: 0;
+}
+
+/* version slider */
+.version-slider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
