@@ -8,6 +8,12 @@ import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import { useCallback, useEffect, useState } from 'react'
 import Layout from './Layout.js'
 
+const empty: DataFrame = {
+  header: [],
+  numRows: 0,
+  rows: () => [],
+}
+
 export default function App(): ReactNode {
   const params = new URLSearchParams(location.search)
   const queryUrl = params.get('key') ?? undefined
@@ -19,8 +25,13 @@ export default function App(): ReactNode {
   const [versions, setVersions] = useState<string[] | undefined>()
 
   const setUnknownError = useCallback((e: unknown) => {
-    setError(e instanceof Error ? e : new Error(String(e)))
-  }, [])
+    if (e instanceof Error && e.message === 'No iceberg snapshots found') {
+      console.warn('No iceberg snapshots found for version', version)
+      setPageProps(props => props ? { ...props, df: empty } : undefined)
+    } else {
+      setError(e instanceof Error ? e : new Error(String(e)))
+    }
+  }, [version])
 
   useEffect(() => {
     // List metadata versions
