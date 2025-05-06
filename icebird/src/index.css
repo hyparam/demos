@@ -169,6 +169,7 @@ main {
   /* all one line */
   text-overflow: ellipsis;
   white-space: nowrap;
+  justify-content: space-between;
 }
 .viewer {
   display: flex;

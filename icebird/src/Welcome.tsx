@@ -1,6 +1,6 @@
 import { FormEvent, ReactNode, useCallback, useRef } from 'react'
 
-const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/spark/bunnies'
+const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/pyice/default.db/events'
 
 interface Props {
   setTableUrl: (url: string) => void
@@ -30,7 +30,7 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
         Uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance windowed table viewing.
       </p>
       <form onSubmit={onSubmit}>
-        <label htmlFor="url">Enter a URL to a public iceberg table:</label>
+        <label htmlFor="url">Enter a URL to a public iceberg table with CORS enabled:</label>
         <div className="inputGroup">
           <input id="url" type="url" ref={urlRef} required={false} placeholder={exampleUrl} />
           <button>Load</button>

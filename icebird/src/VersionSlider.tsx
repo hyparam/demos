@@ -18,6 +18,7 @@ export default function VersionSlider({
 
   return (
     <label className='version-slider'>
+      <span>{value}</span>
       <input
         type='range'
         min={0}
@@ -26,7 +27,6 @@ export default function VersionSlider({
         value={idx}
         onChange={e => { onChange(versions[Number(e.currentTarget.value)]) }}
       />
-      <span>{value}</span>
     </label>
   )
 }
