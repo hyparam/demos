@@ -1,5 +1,6 @@
-import { FileMetaData, toJson } from 'hyparquet'
-import { ReactNode } from 'react'
+import type { FileMetaData } from 'hyparquet'
+import { Json } from 'hyperparam'
+import type { ReactNode } from 'react'
 
 interface MetadataProps {
   metadata: FileMetaData
@@ -12,7 +13,7 @@ interface MetadataProps {
  * @returns {ReactNode}
  */
 export default function ParquetMetadata({ metadata }: MetadataProps): ReactNode {
-  return <code className='viewer'>
-    {JSON.stringify(toJson(metadata), null, ' ')}
+  return <code className='viewer json'>
+    <Json json={metadata} />
   </code>
 }

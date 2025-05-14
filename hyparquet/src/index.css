@@ -311,3 +311,8 @@ input[type="file"] {
   min-width: 0;
   width: 0;
 }
+
+.json {
+  background-color: #22222b;
+  padding-left: 20px;
+}
