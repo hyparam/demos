@@ -14,8 +14,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "hightable": "0.15.4",
-    "hyperparam": "0.2.43",
+    "hightable": "0.15.5",
+    "hyperparam": "0.2.44",
     "icebird": "0.3.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
