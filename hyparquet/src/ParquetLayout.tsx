@@ -90,6 +90,7 @@ function Column({ key, column }: { key: number, column: ColumnChunk }) {
 }
 
 function ColumnIndexes({ metadata }: { metadata: FileMetaData }) {
+  // find column and offset indexes
   const indexPages = []
   for (const rowGroup of metadata.row_groups) {
     for (const column of rowGroup.columns) {
@@ -111,11 +112,14 @@ function ColumnIndexes({ metadata }: { metadata: FileMetaData }) {
     }
   }
 
-  return <Group name='ColumnIndexes'>
-    {indexPages.map(({ name, start, end }, index) =>
-      <Cell key={index} name={name} start={start} end={end} />,
-    )}
-  </Group>
+  if (indexPages.length === 0) return null
+  return (
+    <Group name='ColumnIndexes'>
+      {indexPages.map(({ name, start, end }, index) =>
+        <Cell key={index} name={name} start={start} end={end} />,
+      )}
+    </Group>
+  )
 }
 
 /**
