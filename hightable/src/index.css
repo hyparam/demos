@@ -1,6 +1,6 @@
 * {
   box-sizing: border-box;
-  font-family: 'Mulish', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: "Mulish", "Helvetica Neue", Helvetica, Arial, sans-serif;
   margin: 0;
   padding: 0;
 }
@@ -44,7 +44,7 @@ nav.sidebar > div {
   color: #111;
   display: flex;
   filter: drop-shadow(0 0 2px #bbb);
-  font-family: 'Century Gothic', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: "Century Gothic", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 1.1em;
   font-weight: bold;
   opacity: 0.9;
@@ -61,7 +61,7 @@ nav.sidebar > div {
   text-decoration: none;
 }
 .brand::before {
-  content: '';
+  content: "";
   background: url(logo.svg) no-repeat 0 center;
   background-size: 26px;
   height: 26px;
@@ -130,5 +130,11 @@ nav.sidebar > div {
 
 thead td:first-child {
   align-items: center;
-  background: url('https://hyperparam.app/assets/table/hightable.svg') #f9f4ff no-repeat center 6px;
+  background: url("https://hyperparam.app/assets/table/hightable.svg") #f9f4ff
+    no-repeat center 6px;
+
+  /* TODO: move to hightable? */
+  &[aria-checked="true"] {
+    background: revert;
+  }
 }
