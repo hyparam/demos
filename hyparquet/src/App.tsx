@@ -2,7 +2,6 @@ import { ReactNode } from 'react'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
 
-import { rowCache } from 'hightable'
 import { byteLengthFromUrl, parquetMetadataAsync } from 'hyparquet'
 import { AsyncBufferFrom, asyncBufferFrom, parquetDataFrame } from 'hyperparam'
 import { useCallback, useEffect, useState } from 'react'
@@ -20,6 +19,13 @@ export default function App(): ReactNode {
     setError(e instanceof Error ? e : new Error(String(e)))
   }, [])
 
+  const setAsyncBuffer = useCallback(async function setAsyncBuffer(name: string, from: AsyncBufferFrom) {
+    const asyncBuffer = await asyncBufferFrom(from)
+    const metadata = await parquetMetadataAsync(asyncBuffer)
+    const df = parquetDataFrame(from, metadata)
+    setPageProps({ metadata, df, name, byteLength: from.byteLength, setError: setUnknownError })
+  }, [setUnknownError])
+
   const onUrlDrop = useCallback(
     (url: string) => {
       // Add key=url to query string
@@ -28,7 +34,7 @@ export default function App(): ReactNode {
       history.pushState({}, '', `${location.pathname}?${params}`)
       byteLengthFromUrl(url).then(byteLength => setAsyncBuffer(url, { url, byteLength })).catch(setUnknownError)
     },
-    [setUnknownError],
+    [setUnknownError, setAsyncBuffer],
   )
 
   useEffect(() => {
@@ -41,13 +47,6 @@ export default function App(): ReactNode {
     // Clear query string
     history.pushState({}, '', location.pathname)
     setAsyncBuffer(file.name, { file, byteLength: file.size }).catch(setUnknownError)
-  }
-
-  async function setAsyncBuffer(name: string, from: AsyncBufferFrom) {
-    const asyncBuffer = await asyncBufferFrom(from)
-    const metadata = await parquetMetadataAsync(asyncBuffer)
-    const df = rowCache(parquetDataFrame(from, metadata))
-    setPageProps({ metadata, df, name, byteLength: from.byteLength, setError })
   }
 
   return <Layout error={error}>

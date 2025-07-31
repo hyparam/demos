@@ -12,7 +12,7 @@ export interface PageProps {
   df: DataFrame
   name: string
   byteLength?: number
-  setError: (e: Error) => void
+  setError: (e: unknown) => void
 }
 
 /**
