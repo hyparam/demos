@@ -9,7 +9,7 @@ export interface PageProps {
   versions: string[]
   version: string
   setVersion: (version: string) => void
-  setError: (e: Error) => void
+  setError: (e: unknown) => void
 }
 
 /**
