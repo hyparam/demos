@@ -23,7 +23,7 @@ function createRandomSelection(): Selection {
 }
 
 function createRandomOrderBy(): OrderBy {
-  const columns = data.header
+  const columns = data.columnDescriptors.map(cd => cd.name)
   const column = columns[Math.floor(Math.random() * columns.length)]
   const direction = Math.random() < 0.5 ? 'ascending' : 'descending'
   return [{ column, direction }]
