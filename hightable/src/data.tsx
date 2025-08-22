@@ -1,4 +1,4 @@
-import { DataFrameEvents, ResolvedValue, UnsortableDataFrame, createEventTarget, sortableDataFrame } from 'hightable'
+import { DataFrame, DataFrameEvents, ResolvedValue, createEventTarget, sortableDataFrame } from 'hightable'
 
 export function checkSignal(signal?: AbortSignal): void {
   if (signal?.aborted) {
@@ -46,8 +46,8 @@ function generateValue({ row, column }: { row: number, column: string }): string
     throw new Error(`Unknown column: ${column}`)
   }}
 
-const mockData: UnsortableDataFrame = {
-  header,
+const mockData: DataFrame = {
+  columnDescriptors: header.map(column => ({ name: column })),
   numRows,
   getCell: ({ row, column }) => {
     return cellCache.get(column)?.[row]
