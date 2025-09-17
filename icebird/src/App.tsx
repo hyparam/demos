@@ -2,15 +2,15 @@ import { ReactNode } from 'react'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
 
-import type { DataFrame, DataFrameEvents, ResolvedValue, UnsortableDataFrame } from 'hightable'
-import { createEventTarget, sortableDataFrame } from 'hightable'
+import type { DataFrame, DataFrameEvents, ResolvedValue } from 'hightable'
+import { checkSignal, createEventTarget, sortableDataFrame, validateFetchParams, validateGetCellParams, validateGetRowNumberParams } from 'hightable'
 import { icebergListVersions, icebergMetadata, icebergRead } from 'icebird'
 import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import { useCallback, useEffect, useState } from 'react'
 import Layout from './Layout.js'
 
 const empty: DataFrame = {
-  header: [],
+  columnDescriptors: [],
   numRows: 0,
   eventTarget: createEventTarget<DataFrameEvents>(),
   getRowNumber: () => undefined,
@@ -89,7 +89,7 @@ function icebergDataFrame(tableUrl: string, metadataFileName: string, metadata: 
   const currentSchemaId = metadata['current-schema-id']
   const schema = metadata.schemas.find(s => s['schema-id'] === currentSchemaId)
   if (!schema) throw new Error('Current schema not found in metadata')
-  const header = schema.fields.map(f => f.name)
+  const columnDescriptors = schema.fields.map(({ name }) => ({ name }))
   const eventTarget = createEventTarget<DataFrameEvents>()
 
   type CachedValue<T> = {
@@ -101,16 +101,15 @@ function icebergDataFrame(tableUrl: string, metadataFileName: string, metadata: 
 
   const rowNumberCache: CachedValue<number>[] = []
   const cellCache = new Map<string, CachedValue<unknown>[]>()
-  header.forEach(column => cellCache.set(column, []))
+  columnDescriptors.forEach(({ name }) => cellCache.set(name, []))
 
-  function getRowNumber({ row }: {row: number}): ResolvedValue<number> | undefined {
-    validateRow({ row, data: { numRows } })
+  function getRowNumber({ row }: { row: number }): ResolvedValue<number> | undefined {
+    validateGetRowNumberParams({ row, data: { numRows, columnDescriptors } })
     const cachedValue = rowNumberCache[row]
     return cachedValue?.kind === 'fetched' ? cachedValue.value : undefined
   }
-  function getCell({ row, column }: {row: number, column: string}): ResolvedValue<unknown> | undefined {
-    validateRow({ row, data: { numRows } })
-    validateColumn({ column, data: { header } })
+  function getCell({ row, column }: { row: number, column: string }): ResolvedValue<unknown> | undefined {
+    validateGetCellParams({ row, column, data: { numRows, columnDescriptors } })
     const cachedValue = cellCache.get(column)?.[row]
     return cachedValue?.kind === 'fetched' ? cachedValue.value : undefined
   }
@@ -120,14 +119,14 @@ function icebergDataFrame(tableUrl: string, metadataFileName: string, metadata: 
 
   // TODO: fetch by row groups, to avoid fetching row by row when we scroll
 
-  const unsortableDataFrame: UnsortableDataFrame = {
-    header,
+  const unsortableDataFrame: DataFrame = {
+    columnDescriptors,
     numRows,
     eventTarget,
     getRowNumber,
     getCell,
     async fetch({ rowStart, rowEnd, columns, signal }) {
-      validateFetchParams({ rowStart, rowEnd, columns, data: { numRows, header } })
+      validateFetchParams({ rowStart, rowEnd, columns, data: { numRows, columnDescriptors } })
       checkSignal(signal)
 
       const ranges = []
@@ -199,28 +198,4 @@ function icebergDataFrame(tableUrl: string, metadataFileName: string, metadata: 
   }
   return sortableDataFrame(unsortableDataFrame)
 
-}
-
-function validateFetchParams({ rowStart, rowEnd, columns, data: { numRows, header } }: {rowStart: number, rowEnd: number, columns?: string[], data: Pick<DataFrame, 'numRows' | 'header'>}): void {
-  if (rowStart < 0 || rowEnd > numRows || !Number.isInteger(rowStart) || !Number.isInteger(rowEnd) || rowStart > rowEnd) {
-    throw new Error(`Invalid row range: ${rowStart} - ${rowEnd}, numRows: ${numRows}`)
-  }
-  if (columns?.some(column => !header.includes(column))) {
-    throw new Error(`Invalid columns: ${columns.join(', ')}. Available columns: ${header.join(', ')}`)
-  }
-}
-function validateRow({ row, data: { numRows } }: {row: number, data: Pick<DataFrame, 'numRows'>}): void {
-  if (row < 0 || row >= numRows || !Number.isInteger(row)) {
-    throw new Error(`Invalid row index: ${row}, numRows: ${numRows}`)
-  }
-}
-function validateColumn({ column, data: { header } }: {column: string, data: Pick<DataFrame, 'header'>}): void {
-  if (!header.includes(column)) {
-    throw new Error(`Invalid column: ${column}. Available columns: ${header.join(', ')}`)
-  }
-}
-function checkSignal(signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    throw new DOMException('The operation was aborted.', 'AbortError')
-  }
 }
