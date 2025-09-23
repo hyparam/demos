@@ -316,7 +316,3 @@ input[type="file"] {
   background-color: #22222b;
   padding-left: 20px;
 }
-
-[role="menu"] > button[role="menuitem"]  {
-  color: #444;
-}
