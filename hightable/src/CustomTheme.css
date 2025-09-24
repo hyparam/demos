@@ -1,72 +1,62 @@
 .custom-hightable {
-  --mock-row-label-background: lightcoral;
-  --border-color: lightcoral;
-  --sort-indicator-background: transparent;
+  --hy-color-1: #000;
+  --hy-color-2: #444;
+  --hy-color-3: #666;
+  --hy-color-5: #bbb;
+  --hy-color-7: #ccc;
+  --hy-color-8: #ddd;
+  --hy-color-9: #f0f0f0;
+  --hy-color-10: #fff;
+
+  --hy-accent-1: #706fb1;
+  --hy-accent-2: #9d9cd5;
+  --hy-accent-3: #ccd;
+  --hy-accent-4: #dbdbe5;
+  --hy-accent-5: #efeef6;
+
+  --hy-highlight-1: lightyellow;
+  --hy-highlight-2: yellow;
+
+  --header-color: hsl(0, 100%, 27%);
+  --menu-color: var(--hy-color-2);
+  --menu-item-color: var(--hy-color-2);
+  --menu-button-color: var(--hy-color-2);
+  --primary-sort-icon-color: inherit;
+  --secondary-sort-icon-color: var(--hy-color-8);
+  --row-number-color: var(--hy-color-1);
+  --text-color: var(--hy-color-1);
+
+  --focus-background-color: var(--hy-accent-5);
+  --focusable-background-color: var(--hy-color-9);
+  --background-color: var(--hy-color-10);
   --header-background-color: lightblue;
-  --row-label-background: lightgreen;
-  --row-label-color: black;
-  --selected-row-background: lightyellow;
-  --selected-row-header-background: lightcoral;
-  --resizer-color: lightcoral;
-  --table-corner-logo-background: lightcoral;
-  --top-bar-background-color: lightcoral;
-  --table-corner-background: lightcoral;
-}
+  --menu-background-color: var(--hy-color-9);
+  --menu-button-background-color: var(--hy-color-9);
+  --menu-button-hovered-background-color: var(--hy-accent-4);
+  --menu-button-focused-background-color: var(--hy-accent-4);
+  --menu-item-background-color: var(--hy-color-10);
+  --menu-item-hovered-background-color: var(--hy-color-9);
+  --row-number-background-color: lightgreen;
+  --row-number-hovered-background-color: var(--hy-accent-3);
+  --row-number-selected-background-color: var(--hy-highlight-1);
+  --row-hovered-background-color: var(--hy-accent-4);
+  --row-selected-background-color: var(--hy-highlight-2);
+  --corner-cell-background-color: lightgreen;
+  --resize-indicator-background-color: var(--hy-accent-2);
 
-.custom-hightable thead th {
-  background-color: var(--header-background-color);
-  border-bottom: 2px solid var(--border-color);
-  color: hsl(0, 100%, 27%);
-  font-family: mono;
-}
+  --top-border-color: var(--hy-accent-1);
+  --focus-border-color: var(--hy-accent-1);
+  --focusable-border-color: var(--hy-color-3);
+  --cell-border-color: lightcoral;
+  --cell-hovered-right-border-color: var(--hy-color-5);
+  --header-bottom-border-color: var(--hy-color-7);
+  --menu-border-color: var(--hy-color-7);
+  --menu-inner-border-color: var(--hy-color-7);
+  --resizer-hovered-right-border-color: var(--hy-accent-2);
+  --row-number-hovered-right-border-color: var(--hy-color-7);
+  --corner-cell-right-border-color: var(--hy-color-7);
 
-.custom-hightable thead th[aria-sort="ascending"]::after,
-.custom-hightable thead th[aria-sort="descending"]::after {
-  background-color: var(--sort-indicator-background);
-}
-
-/* cells */
-.custom-hightable th,
-.custom-hightable td {
-  border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
-}
-
-/* column resize */
-.custom-hightable thead [role="separator"] {
-  border-right: 1px solid var(--border-color);
-}
-.custom-hightable thead [role="separator"]:hover {
-  background-color: var(--resizer-color);
-}
-
-/* row numbers */
-.custom-hightable tbody [role="rowheader"] {
-  background-color: var(--row-label-background);
-  border-right: 1px solid var(--border-color);
-  color: var(--row-label-color);
-}
-/* highlight the selected rows */
-.custom-hightable tr[aria-selected="true"] {
-  background-color: var(--selected-row-background);
-}
-.custom-hightable tr[aria-selected="true"] [role="rowheader"] {
-  background-color: var(--selected-row-header-background);
-}
-
-/* table corner */
-/* TODO: find a better selector for the table corner */
-.custom-hightable thead td:first-child {
-  background-color: var(--table-corner-logo-background);
-  border-right: 1px solid var(--border-color);
-}
-.custom-hightable thead td:first-child[aria-disabled="false"] {
-  background: var(
-    --table-corner-background
-  ); /* redundant with td:first-child, but allows to force the background if it has been overridden with a logo */
-}
-
-/* pending table state */
-.custom-hightable thead th::before {
-  background-color: var(--top-bar-background-color);
+  thead th {
+    font-family: mono;
+  }
 }
