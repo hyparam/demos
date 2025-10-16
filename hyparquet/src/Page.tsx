@@ -24,7 +24,9 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
   const [lens, setLens] = useState<Lens>('table')
 
   return <>
-    <div className='top-header'>{name}</div>
+    <div className='top-header'>
+      {name}
+    </div>
     <div className='view-header'>
       {byteLength !== undefined && <span title={byteLength.toLocaleString() + ' bytes'}>{formatFileSize(byteLength)}</span>}
       <span>{df.numRows.toLocaleString()} rows</span>
