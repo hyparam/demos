@@ -47,7 +47,7 @@ export default function Dropzone({ children, onFileDrop, onUrlDrop }: DropzonePr
    */
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>): void {
     const { files } = e.target
-    if (!files || files.length !== 1) return
+    if (files?.length !== 1) return
     onFileDrop(files[0])
   }
 

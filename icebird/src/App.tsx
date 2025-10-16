@@ -49,10 +49,9 @@ export default function App(): ReactNode {
       .catch(setUnknownError)
   }, [tableUrl, versions, setVersions, setUnknownError])
 
-  useEffect(() => {
-    if (!version) return
-    setPageProps(props => props ? { ...props, version } : undefined)
-  }, [setPageProps, version])
+  if (pageProps && version && pageProps.version !== version) {
+    setPageProps({ ...pageProps, version })
+  }
 
   useEffect(() => {
     if (!tableUrl || !versions || !version) return
