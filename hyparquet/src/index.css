@@ -75,7 +75,7 @@ nav.sidebar {
   height: 100vh;
 }
 nav.sidebar > div {
-  background-image: linear-gradient(to bottom, #f2f2f2, #e4e4e4);
+  background: #eef0f9;
   box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
   position: absolute;
@@ -148,15 +148,17 @@ main {
 .top-header {
   align-items: center;
   border-bottom: 1px solid #ddd;
-  background: #eee;
+  border-radius: 8px;
+  background: #333;
+  color: #eee;
   display: flex;
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   height: 32px;
   justify-content: space-between;
   min-height: 32px;
-  padding-left: 20px;
+  margin: 5px;
+  padding: 20px;
   text-decoration-thickness: 1px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -164,11 +166,11 @@ main {
 
 .view-header {
   align-items: center;
-  background-color: #f2f2f2;
   color: #444;
   display: flex;
+  font-size: 10pt;
   gap: 16px;
-  height: 24px;
+  height: 22px;
   padding: 0 8px;
   /* all one line */
   text-overflow: ellipsis;
@@ -188,15 +190,15 @@ main {
   flex-direction: column;
   font-size: 20px;
   height: 100vh;
-  max-width: 640px;
-  margin: 0 auto;
+  width: 100%;
   padding: 10px;
   overflow-y: auto;
 }
 #welcome > div {
   display: flex;
   flex-direction: column;
-  margin: auto 0;
+  margin: auto;
+  max-width: 640px;
 }
 /* quick link buttons */
 .quick-links {
@@ -213,8 +215,9 @@ main {
 .quick-links a {
   background-position: 10px center;
   background-size: 18px;
-  border: 1px solid #444;
+  border: 1px solid #ddd;
   border-radius: 8px;
+  color: #333;
   font-size: 8pt;
   overflow: hidden;
   padding: 12px;
@@ -222,9 +225,13 @@ main {
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 .quick-links a:hover {
-  background-color: #ddf8dd;
+  background-color: #4433aa11;
+  border-color: #43a;
+  color: #43a;
+  text-decoration: none;
 }
 .huggingface {
   background: url('assets/huggingface.svg') no-repeat 8px center;

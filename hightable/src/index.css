@@ -31,7 +31,7 @@ nav.sidebar {
   height: 100vh;
 }
 nav.sidebar > div {
-  background-image: linear-gradient(to bottom, #f2f2f2, #e4e4e4);
+  background: #eef0f9;
   box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
   position: absolute;
