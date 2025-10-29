@@ -1,10 +1,4 @@
-import { DataFrame, DataFrameEvents, ResolvedValue, createEventTarget, sortableDataFrame } from 'hightable'
-
-export function checkSignal(signal?: AbortSignal): void {
-  if (signal?.aborted) {
-    throw new DOMException('The operation was aborted.', 'AbortError')
-  }
-}
+import { DataFrame, DataFrameEvents, ResolvedValue, checkSignal, createEventTarget, sortableDataFrame } from 'hightable'
 
 function lorem(rand: number, length: number): string {
   const words = 'lorem ipsum dolor sit amet consectetur adipiscing elit'.split(' ')
@@ -13,10 +7,14 @@ function lorem(rand: number, length: number): string {
 }
 
 function delayResolve<T>({ value, ms, signal }: {value: T, ms?: number, signal?: AbortSignal}): Promise<ResolvedValue<T>> {
-  return new Promise(resolve => setTimeout(
+  return new Promise((resolve, reject) => setTimeout(
     () => {
-      checkSignal(signal)
-      resolve({ value })
+      try {
+        checkSignal(signal)
+        resolve({ value })
+      } catch (e) {
+        reject(e)
+      }
     },
     ms ?? 100 * Math.floor(10 * Math.random()),
   ))
