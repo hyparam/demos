@@ -14,8 +14,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "hightable": "0.20.3",
-    "hyperparam": "0.3.26",
+    "hightable": "0.20.4",
+    "hyperparam": "0.3.27",
     "icebird": "0.3.1",
     "react": "19.2.0",
     "react-dom": "19.2.0"
@@ -24,7 +24,7 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "5.1.0",
-    "@vitest/coverage-v8": "4.0.3",
+    "@vitest/coverage-v8": "4.0.5",
     "eslint": "9.38.0",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
@@ -33,6 +33,6 @@
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.2",
     "vite": "7.1.12",
-    "vitest": "4.0.3"
+    "vitest": "4.0.5"
   }
 }
