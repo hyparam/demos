@@ -315,8 +315,6 @@ input[type="file"] {
 
 .hightable thead td:first-child {
   background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center 6px;
-  min-width: 0;
-  width: 0;
 }
 
 .json {
