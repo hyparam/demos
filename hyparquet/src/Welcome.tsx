@@ -2,12 +2,13 @@ import { type FormEvent, ReactNode, useCallback, useRef } from 'react'
 import audioSvg from './assets/audio.svg'
 import hyparquetMp3 from './assets/hyparquet.mp3'
 
+const exampleUrl = 'https://hyperparam-public.s3.amazonaws.com/wiki-en-00000-of-00041.parquet'
+
 interface Props {
   setUrl: (url: string) => void
 }
 
 export default function Welcome({ setUrl }: Props): ReactNode {
-  const exampleUrl = 'https://hyperparam-public.s3.amazonaws.com/wiki-en-00000-of-00041.parquet'
   const audio = useRef<HTMLAudioElement>(null)
   const urlRef = useRef<HTMLInputElement>(null)
 
