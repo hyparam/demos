@@ -1,15 +1,29 @@
-import { ReactNode, useRef } from 'react'
+import { type FormEvent, ReactNode, useCallback, useRef } from 'react'
 import audioSvg from './assets/audio.svg'
 import hyparquetMp3 from './assets/hyparquet.mp3'
 
-export default function Welcome(): ReactNode {
+const exampleUrl = 'https://hyperparam-public.s3.amazonaws.com/wiki-en-00000-of-00041.parquet'
+
+interface Props {
+  setUrl: (url: string) => void
+}
+
+export default function Welcome({ setUrl }: Props): ReactNode {
   const audio = useRef<HTMLAudioElement>(null)
+  const urlRef = useRef<HTMLInputElement>(null)
 
   function playAudio() {
     audio.current?.play().catch(() => {
       console.warn('Failed to play audio')
     })
   }
+
+  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const value = urlRef.current?.value ?? ''
+    const url = value === '' ? exampleUrl : value
+    setUrl(url)
+  }, [setUrl])
 
   return <div id="welcome">
     <div>
@@ -25,9 +39,13 @@ export default function Welcome(): ReactNode {
         Online demo of <a href="https://github.com/hyparam/hyparquet">hyparquet</a>: a parser for apache parquet files.
         Uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance windowed table viewing.
       </p>
-      <p>
-        Drag and drop a parquet file (or url) to see your parquet data. 👀
-      </p>
+      <form onSubmit={onSubmit}>
+        <label htmlFor="url">Drag and drop a parquet file (or url) to see your parquet data. 👀</label>
+        <div className="inputGroup">
+          <input id="url" type="url" ref={urlRef} required={false} placeholder={exampleUrl} />
+          <button>Load</button>
+        </div>
+      </form>
       <p>
         Example files:
       </p>

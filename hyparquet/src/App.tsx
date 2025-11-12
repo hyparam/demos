@@ -55,7 +55,7 @@ export default function App(): ReactNode {
       onError={(e) => { setError(e) }}
       onFileDrop={onFileDrop}
       onUrlDrop={onUrlDrop}>
-      {pageProps ? <Page {...pageProps} /> : <Welcome />}
+      {pageProps ? <Page {...pageProps} /> : <Welcome setUrl={onUrlDrop} />}
     </Dropzone>
   </Layout>
 }
