@@ -17,6 +17,10 @@ h2 {
   margin-top: 10px;
   font-size: 12pt;
 }
+label {
+  margin: 15px 0;
+  display: block;
+}
 p {
   margin: 15px 0;
 }
@@ -33,6 +37,22 @@ sub {
 }
 sub img {
   cursor: pointer;
+}
+
+input {
+  height: 32px;
+}
+input,
+textarea {
+  border: 2px solid #999;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: border 0.3s;
+}
+input:focus,
+textarea:focus {
+  outline: none;
+  border: 2px solid #99e;
 }
 
 /* dropzone */
@@ -199,6 +219,13 @@ main {
   flex-direction: column;
   margin: auto;
   max-width: 640px;
+}
+.inputGroup {
+  display: flex;
+  gap: 10px;
+}
+.inputGroup > input {
+  flex: 1;
 }
 /* quick link buttons */
 .quick-links {

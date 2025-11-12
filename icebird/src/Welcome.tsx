@@ -14,7 +14,7 @@ export default function Welcome({ setTableUrl }: Props): ReactNode {
     const url = urlRef.current?.value ?? ''
     const tableUrl = url === '' ? exampleUrl : url
     setTableUrl(tableUrl)
-  }, [setTableUrl, urlRef])
+  }, [setTableUrl])
 
   return <div id="welcome">
     <div>
