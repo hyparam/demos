@@ -1,0 +1,15 @@
+name: parquetindex-demo
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    paths:
+      - 'parquetindex/**'
+      - '.github/workflows/_common_jobs.yml'
+      - '.github/workflows/ci_parquetindex_demo.yml'
+jobs:
+  ci:
+    uses: ./.github/workflows/_common_jobs.yml
+    with:
+      workspace: parquetindex
