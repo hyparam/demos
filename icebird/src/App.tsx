@@ -13,10 +13,8 @@ import { icebergDataFrame } from './data.js'
 const empty: DataFrame = {
   columnDescriptors: [],
   numRows: 0,
-  eventTarget: createEventTarget<DataFrameEvents>(),
   getRowNumber: () => undefined,
   getCell: () => undefined,
-  fetch: () => Promise.resolve(undefined),
 }
 
 export default function App(): ReactNode {
