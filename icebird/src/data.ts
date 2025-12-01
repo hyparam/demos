@@ -8,8 +8,8 @@ export function icebergDataFrame(tableUrl: string, metadataFileName: string, met
   if (!metadata.snapshots?.length) throw new Error('No iceberg snapshots found')
 
   const snapshot: Snapshot = metadata.snapshots[metadata.snapshots.length - 1]
-  // Warning: this is not exactly the number of rows
-  const numRows = Number(snapshot.summary['total-records'])
+  // Warning: it's the max number of rows, that we use initially. It might be lowered later if we reach the end of the data.
+  let numRows = Number(snapshot.summary['total-records'])
   const currentSchemaId = metadata['current-schema-id']
   const schema = metadata.schemas.find(s => s['schema-id'] === currentSchemaId)
   if (!schema) throw new Error('Current schema not found in metadata')
@@ -45,7 +45,10 @@ export function icebergDataFrame(tableUrl: string, metadataFileName: string, met
 
   const unsortableDataFrame: DataFrame = {
     columnDescriptors,
-    numRows,
+    get numRows() {
+      // provide numRows with a getter to reflect updates
+      return numRows
+    },
     eventTarget,
     getRowNumber,
     getCell,
@@ -92,7 +95,11 @@ export function icebergDataFrame(tableUrl: string, metadataFileName: string, met
           metadata,
         })
 
-        const rowsEnd = rows.length + start
+        if (end >= numRows && start + rows.length < numRows) {
+          console.log(`Adjusting numRows from ${numRows} to ${start + rows.length}`)
+          numRows = start + rows.length
+          eventTarget.dispatchEvent(new CustomEvent('numRowsChange'))
+        }
 
         for (const [i, cells] of rows.entries()) {
           const row = i + start
@@ -103,23 +110,12 @@ export function icebergDataFrame(tableUrl: string, metadataFileName: string, met
             array[row] = { kind: 'fetched', value: { value: cells[column] } }
           }
         }
-        // Not sure if it's the best way to handle the missing rows
-        for (let row = start + rowsEnd; row < end; row++) {
-          rowNumberCache[row] = { kind: 'fetched', value: { value: -1 } } // Indicating that the row is not available - totally not a perfect idea, but it works for now
-          for (const column of columns ?? []) {
-            const array = cellCache.get(column)
-            if (!array) throw new Error(`Column ${column} not found in cache`)
-            array[row] = { kind: 'fetched', value: { value: undefined } }
-          }
-        }
-
         eventTarget.dispatchEvent(new CustomEvent('resolve'))
       })
 
       await Promise.all(promises)
     },
-
   }
-  return sortableDataFrame(unsortableDataFrame)
 
+  return sortableDataFrame(unsortableDataFrame)
 }

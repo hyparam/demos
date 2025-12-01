@@ -1,6 +1,7 @@
 import HighTable, { DataFrame } from 'hightable'
 import type { TableMetadata } from 'icebird/src/types.js'
 import type { ReactNode } from 'react'
+import { useEffect, useState } from 'react'
 import VersionSlider from './VersionSlider'
 
 export interface PageProps {
@@ -20,11 +21,25 @@ export interface PageProps {
 export default function Page({ df, metadata, versions, version, setVersion, setError }: PageProps): ReactNode {
   const name = metadata.location
 
+  const [numRows, setNumRows] = useState(df.numRows)
+  useEffect(() => {
+    function handleNumRowsChange() {
+      setNumRows(df.numRows)
+    }
+    // update on new df
+    handleNumRowsChange()
+    // and on numrowschange events
+    df.eventTarget?.addEventListener('numrowschange', handleNumRowsChange)
+    return () => {
+      df.eventTarget?.removeEventListener('numrowschange', handleNumRowsChange)
+    }
+  }, [df])
+
   return <>
     <div className='top-header'>{name}</div>
 
     <div className='view-header'>
-      <span>{df.numRows.toLocaleString()} rows</span>
+      <span>{numRows.toLocaleString()} rows</span>
 
       <VersionSlider
         versions={versions}
