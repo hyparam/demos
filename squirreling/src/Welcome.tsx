@@ -27,6 +27,11 @@ export default function Welcome(): ReactNode {
             href="?key=https://s3.hyperparam.app/parquetindex/wiki_en100.parquet">
             s3://hyperparam-public/parquetindex/wiki_en.parquet
           </a>
+          <a
+            className="hf"
+            href="?key=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fankislyakov/titanic/resolve/refs%252Fconvert%252Fparquet%2Fdefault%2Ftrain%2F0000.parquet">
+            hf://ankislyakov/titanic/train/0000.parquet
+          </a>
         </li>
       </ul>
     </div>
