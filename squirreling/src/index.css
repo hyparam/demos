@@ -1,0 +1,317 @@
+* {
+  box-sizing: border-box;
+  font-family: 'Mulish', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+body {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+h1 {
+  font-size: 22pt;
+}
+h2 {
+  margin-top: 10px;
+  font-size: 12pt;
+}
+label {
+  margin: 15px 0;
+  display: block;
+}
+p {
+  margin: 15px 0;
+}
+code {
+  font-family: monospace;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+input {
+  height: 32px;
+}
+input,
+textarea {
+  border: 2px solid #999;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: border 0.3s;
+}
+input:focus,
+textarea:focus {
+  outline: none;
+  border: 2px solid #99e;
+}
+
+/* sidebar */
+nav.sidebar {
+  height: 100vh;
+  width: 48px;
+  height: 100vh;
+}
+nav.sidebar > div {
+  background: #eef0f9;
+  box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
+  height: 100vh;
+  position: absolute;
+  width: 48px;
+  z-index: 30;
+}
+
+/* brand logo */
+.brand {
+  align-items: center;
+  color: #111;
+  display: flex;
+  filter: drop-shadow(0 0 2px #bbb);
+  font-family: 'Century Gothic', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 1.1em;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  padding: 10px 12px;
+  text-decoration: none;
+  text-orientation: mixed;
+  user-select: none;
+  writing-mode: vertical-rl;
+}
+.brand:hover {
+  color: #111;
+  filter: drop-shadow(0 0 2px #afa6b9);
+  opacity: 1;
+  text-decoration: none;
+}
+.brand::before {
+  content: '';
+  background: url(logo.svg) no-repeat 0 center;
+  background-size: 26px;
+  height: 26px;
+  width: 26px;
+  margin-bottom: 10px;
+}
+
+/* content area */
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+#app {
+  flex: 1;
+}
+
+/* content area */
+.content-container {
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100vh;
+  padding: 0;
+  /* no outer scrollbars */
+  overflow: hidden;
+}
+
+.top-header {
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  border-radius: 8px;
+  background: #333;
+  color: #eee;
+  display: flex;
+  font-size: 16px;
+  font-weight: 600;
+  height: 32px;
+  justify-content: space-between;
+  min-height: 32px;
+  margin: 5px;
+  padding: 20px;
+  text-decoration-thickness: 1px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-header .file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.top-header .file-info {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  font-weight: normal;
+  color: #aaa;
+  flex-shrink: 0;
+}
+
+.sql-container {
+  position: relative;
+  margin: 0 5px;
+}
+.sql-input {
+  border: none;
+  border-bottom: 1px solid #ddd;
+  border-radius: 0;
+  color: #333;
+  font-family: monospace;
+  font-size: 14px;
+  min-height: 60px;
+  padding: 8px 12px 24px 12px;
+  resize: vertical;
+  width: 100%;
+}
+.sql-input:focus {
+  border: none;
+  border-bottom: 2px solid #99e;
+  outline: none;
+}
+.sql-input.sql-error {
+  border-bottom-color: red;
+}
+
+.query-stats {
+  bottom: 4px;
+  color: #999;
+  display: flex;
+  font-size: 11px;
+  gap: 16px;
+  pointer-events: none;
+  position: absolute;
+  right: 12px;
+}
+.query-stats .sql-error-msg {
+  color: #c33;
+}
+.viewer {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+/* welcome */
+#welcome {
+  display: flex;
+  flex-direction: column;
+  font-size: 20px;
+  height: 100vh;
+  width: 100%;
+  padding: 10px;
+  overflow-y: auto;
+}
+#welcome > div {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 640px;
+}
+.inputGroup {
+  display: flex;
+  gap: 10px;
+}
+.inputGroup > input {
+  flex: 1;
+}
+/* quick link buttons */
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+}
+.quick-links li {
+  display: flex;
+  flex: 1 1 calc(50% - 10px);
+  min-width: 0;
+}
+.quick-links a {
+  background-position: 10px center;
+  background-size: 18px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  font-size: 8pt;
+  overflow: hidden;
+  padding: 12px;
+  padding-left: 36px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+.quick-links a:hover {
+  background-color: #4433aa11;
+  border-color: #43a;
+  color: #43a;
+  text-decoration: none;
+}
+.aws {
+  background: url('assets/s3.svg') no-repeat 8px center;
+}
+.badges {
+  display: flex;
+  gap: 10px;
+}
+
+/* layout */
+.layout {
+  margin: 10px;
+  max-width: 480px;
+}
+.layout,
+.layout .group,
+.layout .cell {
+  background-color: rgba(100, 80, 180, 0.05);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 4px;
+  word-break: break-all;
+}
+.cell,
+.group-header {
+  display: flex;
+}
+.group-header > label,
+.cell > label {
+  display: flex;
+  flex: 1;
+  font-size: 12px;
+  font-weight: normal;
+  justify-content: flex-start;
+}
+.group-header > span {
+  font-size: 10px;
+}
+
+.layout div ul {
+  list-style: none;
+}
+.layout div li {
+  font-size: 10px;
+  padding: 2px 4px;
+  text-align: right;
+}
+
+.hightable thead td:first-child {
+  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center 6px;
+}
+
+.json {
+  background-color: #22222b;
+  padding-left: 20px;
+}
