@@ -1,7 +1,8 @@
 import HighTable, { DataFrame, arrayDataFrame } from 'hightable'
-import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetReadObjects } from 'hyparquet'
-import { executeSql } from 'squirreling'
+import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
+import { AsyncDataSource, executeSql } from 'squirreling'
 import { ReactNode, useEffect, useState } from 'react'
+import { parquetDataSource } from './parquetDataSource.js'
 
 export interface PageProps {
   metadata: FileMetaData
@@ -19,11 +20,11 @@ export interface PageProps {
  * @returns {ReactNode}
  */
 export default function Page({ df, name, byteLength, setError }: PageProps): ReactNode {
-  const [query, setQuery] = useState<string>('SELECT title FROM table')
+  const [query, setQuery] = useState<string>('SELECT * FROM table LIMIT 5')
   const [queryDf, setQueryDf] = useState<DataFrame>(df)
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
-  const [rows, setRows] = useState<Record<string, any>[] | undefined>()
+  const [table, setTable] = useState<AsyncDataSource | undefined>()
   const [sqlError, setSqlError] = useState<string | undefined>()
 
   useEffect(() => {
@@ -33,19 +34,20 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
 
     if (query.length > 2) {
       async function updateQuery() {
+        if (!table) return
         console.log(`Running SQL query "${query}"...`)
         setQueryTime(undefined)
         setFirstRowTime(undefined)
         setQueryDf(arrayDataFrame([]))
-        let results: Record<string, any>[] = []
+        let results: Record<string, unknown>[] = []
         const startTime = performance.now()
         // TODO: Wrap data async from parquet
         const rowGen = executeSql({
-          tables: { table: rows ?? [] },
+          tables: { table },
           query,
         })
         for await (const asyncRow of rowGen) {
-          const row: Record<string, any> = {}
+          const row: Record<string, unknown> = {}
           for (const [key, value] of Object.entries(asyncRow)) {
             row[key] = await value()
           }
@@ -67,7 +69,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       void updateQuery().catch((err: unknown) => {
         if (signal.aborted) return
         setSqlError(err instanceof Error ? err.message : String(err))
-        console.error(err)
+        console.warn('SQL error:', err)
       })
     } else {
       setQueryDf(df)
@@ -76,18 +78,16 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
     }
 
     return () => { controller.abort(new Error('Query aborted')) }
-  }, [query, df, name, rows, setError])
+  }, [query, df, name, table, setError])
 
-  // preload parquet data first 100 rows
+  // prepare parquet data source
   useEffect(() => {
     async function fetchData() {
       const asyncBuffer = await asyncBufferFromUrl({ url: name })
       const file = cachedAsyncBuffer(asyncBuffer)
-      const rows = await parquetReadObjects({
-        file,
-        rowEnd: 1000,
-      })
-      setRows(rows)
+      const metadata = await parquetMetadataAsync(file)
+      const table = parquetDataSource(file, metadata)
+      setTable(table)
     }
     void fetchData().catch(setError)
   }, [name, setError])
