@@ -25,6 +25,7 @@ function convertExpr(node: ExprNode, negate: boolean): ParquetQueryFilter | unde
     return convertInValues(node, negate)
   }
   if (node.type === 'cast') {
+    // TODO: cast
     return convertExpr(node.expr, negate)
   }
   // Non-convertible types - return undefined to skip optimization
@@ -93,18 +94,17 @@ function mapOperator(
   flipped: boolean,
   negate: boolean,
 ): keyof ParquetQueryOperator | undefined {
-  if (!isBinaryOp(op)) return
+  if (!isComparisonOp(op)) return
 
   let mappedOp: ComparisonOp = op
   if (negate) mappedOp = neg(mappedOp)
   if (flipped) mappedOp = flip(mappedOp)
-  // Symmetric operators (same when flipped)
-  if (mappedOp === '=') return '$eq'
-  if (mappedOp === '!=' || mappedOp === '<>') return '$ne'
   if (mappedOp === '<') return '$lt'
   if (mappedOp === '<=') return '$lte'
   if (mappedOp === '>') return '$gt'
   if (mappedOp === '>=') return '$gte'
+  if (mappedOp === '=') return '$eq'
+  return '$ne'
 }
 
 function neg(op: ComparisonOp): ComparisonOp {
@@ -113,9 +113,7 @@ function neg(op: ComparisonOp): ComparisonOp {
   if (op === '>') return '<='
   if (op === '>=') return '<'
   if (op === '=') return '!='
-  if (op === '!=') return '='
-  if (op === '<>') return '='
-  throw new Error(`Unexpected comparison operator: ${op}`)
+  return '='
 }
 
 function flip(op: ComparisonOp): ComparisonOp {
@@ -123,14 +121,11 @@ function flip(op: ComparisonOp): ComparisonOp {
   if (op === '<=') return '>='
   if (op === '>') return '<'
   if (op === '>=') return '<='
-  if (op === '=') return '='
-  if (op === '!=') return '!='
-  if (op === '<>') return '='
-  throw new Error(`Unexpected comparison operator: ${op}`)
+  return op
 }
 
-export function isBinaryOp(op: string): op is ComparisonOp {
-  return ['AND', 'OR', 'LIKE', '=', '!=', '<>', '<', '>', '<=', '>='].includes(op)
+export function isComparisonOp(op: string): op is ComparisonOp {
+  return ['=', '!=', '<>', '<', '>', '<=', '>='].includes(op)
 }
 
 /**

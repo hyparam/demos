@@ -1,9 +1,16 @@
 import HighTable, { DataFrame, arrayDataFrame } from 'hightable'
 import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
-import { AsyncDataSource, executeSql } from 'squirreling'
 import { ReactNode, useEffect, useState } from 'react'
+import { AsyncDataSource, executeSql } from 'squirreling'
 import { parquetDataSource } from './parquetDataSource.js'
 import { countingBuffer } from './countingBuffer.js'
+import { HighlightedTextArea } from './HighlightedTextArea.js'
+
+interface SqlErrorInfo {
+  message: string
+  positionStart?: number
+  positionEnd?: number
+}
 
 export interface PageProps {
   metadata: FileMetaData
@@ -26,7 +33,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
   const [table, setTable] = useState<AsyncDataSource | undefined>()
-  const [sqlError, setSqlError] = useState<string | undefined>()
+  const [sqlError, setSqlError] = useState<SqlErrorInfo | undefined>()
   const [networkBytes, setNetworkBytes] = useState<number>(0)
   const [countedBuffer, setCountedBuffer] = useState<ReturnType<typeof countingBuffer> | undefined>()
 
@@ -42,6 +49,10 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
         setQueryTime(undefined)
         setFirstRowTime(undefined)
         setQueryDf(arrayDataFrame([]))
+
+        // TODO: Parse SQL query
+        // const parsedQuery = parseSql(query)
+
         let results: Record<string, unknown>[] = []
         const startTime = performance.now()
         // TODO: Wrap data async from parquet
@@ -72,7 +83,9 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       }
       void updateQuery().catch((err: unknown) => {
         if (signal.aborted) return
-        setSqlError(err instanceof Error ? err.message : String(err))
+        const message = err instanceof Error ? err.message : String(err)
+        const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
+        setSqlError({ message, positionStart, positionEnd })
         console.warn('SQL error:', err)
       })
     } else {
@@ -107,16 +120,20 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       </div>
     </div>
     <div className='sql-container'>
-      <textarea
-        className={`sql-input ${sqlError ? 'sql-error' : ''}`}
-        placeholder="SQL query..."
-        onChange={e => { setQuery(e.target.value) }}
+      <HighlightedTextArea
         value={query}
+        onChange={setQuery}
+        placeholder="SQL query..."
+        className={sqlError ? 'sql-error' : ''}
+        highlightStart={sqlError?.positionStart}
+        highlightEnd={sqlError?.positionEnd}
       />
       <div className='query-stats'>
-        {sqlError && <span className='sql-error-msg'>{sqlError}</span>}
-        {queryTime !== undefined && <span>query: {queryTime.toFixed(0)} ms</span>}
-        {firstRowTime !== undefined && <span>first: {firstRowTime.toFixed(0)} ms</span>}
+        {sqlError && <span className='sql-error-msg'>{sqlError.message}</span>}
+        <span className='query-times'>
+          {queryTime !== undefined && <span>query: {queryTime.toFixed(0)} ms</span>}
+          {firstRowTime !== undefined && <span>first: {firstRowTime.toFixed(0)} ms</span>}
+        </span>
       </div>
     </div>
     <HighTable
