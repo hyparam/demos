@@ -3,6 +3,7 @@ import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsy
 import { AsyncDataSource, executeSql } from 'squirreling'
 import { ReactNode, useEffect, useState } from 'react'
 import { parquetDataSource } from './parquetDataSource.js'
+import { countingBuffer } from './countingBuffer.js'
 
 export interface PageProps {
   metadata: FileMetaData
@@ -26,6 +27,8 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
   const [table, setTable] = useState<AsyncDataSource | undefined>()
   const [sqlError, setSqlError] = useState<string | undefined>()
+  const [networkBytes, setNetworkBytes] = useState<number>(0)
+  const [countedBuffer, setCountedBuffer] = useState<ReturnType<typeof countingBuffer> | undefined>()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -64,6 +67,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
         }
         const elapsed = performance.now() - startTime
         setQueryTime(elapsed)
+        if (countedBuffer) setNetworkBytes(countedBuffer.bytes)
         console.log(`Query result for "${query}" in ${elapsed.toFixed(2)} ms, ${results.length} results`, results)
       }
       void updateQuery().catch((err: unknown) => {
@@ -78,13 +82,15 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
     }
 
     return () => { controller.abort(new Error('Query aborted')) }
-  }, [query, df, name, table, setError])
+  }, [query, df, name, table, setError, countedBuffer])
 
   // prepare parquet data source
   useEffect(() => {
     async function fetchData() {
       const asyncBuffer = await asyncBufferFromUrl({ url: name })
-      const file = cachedAsyncBuffer(asyncBuffer)
+      const counted = countingBuffer(asyncBuffer)
+      setCountedBuffer(counted)
+      const file = cachedAsyncBuffer(counted)
       const metadata = await parquetMetadataAsync(file)
       const table = parquetDataSource(file, metadata)
       setTable(table)
@@ -96,7 +102,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
     <div className='top-header'>
       <span className='file-name'>{name}</span>
       <div className='file-info'>
-        {byteLength !== undefined && <span title={byteLength.toLocaleString() + ' bytes'}>{formatFileSize(byteLength)}</span>}
+        {byteLength !== undefined && <span title={`${networkBytes.toLocaleString()} / ${byteLength.toLocaleString()} bytes`}>{formatFileSize(networkBytes)} / {formatFileSize(byteLength)}</span>}
         <span>{df.numRows.toLocaleString()} rows</span>
       </div>
     </div>

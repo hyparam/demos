@@ -24,7 +24,7 @@ export default function Welcome(): ReactNode {
         <li>
           <a
             className="aws"
-            href="?key=https://s3.hyperparam.app/parquetindex/wiki_en100.parquet">
+            href="?key=https://s3.hyperparam.app/parquetindex/wiki_en200.parquet">
             s3://hyperparam-public/parquetindex/wiki_en.parquet
           </a>
           <a
