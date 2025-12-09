@@ -79,6 +79,7 @@ export default tseslint.config(
 
       '@typescript-eslint/restrict-template-expressions': 'off',
       '@typescript-eslint/no-unused-vars': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'warn',
     },
   },
 )

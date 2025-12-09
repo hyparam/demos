@@ -165,8 +165,9 @@ main {
   border-bottom: 1px solid #ddd;
   border-radius: 0;
   color: #333;
-  font-family: monospace;
-  font-size: 14px;
+  font: 14px monospace;
+  line-height: normal;
+  letter-spacing: normal;
   min-height: 60px;
   padding: 8px 12px 24px 12px;
   resize: vertical;
@@ -181,6 +182,51 @@ main {
   border-bottom-color: red;
 }
 
+/* SQL Input Overlay Container */
+.sql-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Background layer for text highlighting */
+.sql-input-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border: none;
+  border-bottom: 1px solid transparent;
+  font: 14px monospace;
+  line-height: normal;
+  letter-spacing: normal;
+  padding: 8px 12px 24px 12px;
+  min-height: 60px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  overflow: hidden;
+  color: #333;
+  pointer-events: none;
+}
+
+/* Textarea overlay - transparent background */
+.sql-input-wrapper .sql-input {
+  position: relative;
+  background: transparent;
+  color: transparent;
+  caret-color: #333;
+}
+
+/* Error highlight with wavy red underline */
+.sql-error-highlight {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline wavy #cc3333;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
 .query-stats {
   bottom: 4px;
   color: #999;
@@ -189,10 +235,18 @@ main {
   gap: 16px;
   pointer-events: none;
   position: absolute;
+  left: 12px;
   right: 12px;
 }
 .query-stats .sql-error-msg {
-  color: #c33;
+  color: #d33;
+  font: 14px monospace;
+  margin-bottom: 2px;
+}
+.query-stats .query-times {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
 }
 .viewer {
   display: flex;
