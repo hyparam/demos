@@ -3,16 +3,12 @@ import type { AsyncBuffer } from 'hyparquet'
 /**
  * Wraps an AsyncBuffer to count the number of fetches and total bytes fetched.
  */
-export function countingBuffer(asyncBuffer: AsyncBuffer): AsyncBuffer & { fetches: number; bytes: number } {
-  const wrapper = {
+export function countingBuffer(asyncBuffer: AsyncBuffer, onFetch?: (start: number, end?: number) => void): AsyncBuffer {
+  return {
     ...asyncBuffer,
-    fetches: 0,
-    bytes: 0,
     slice(start: number, end?: number) {
-      wrapper.fetches++
-      wrapper.bytes += (end ?? asyncBuffer.byteLength) - start
+      onFetch?.(start, end)
       return asyncBuffer.slice(start, end)
     },
   }
-  return wrapper
 }
