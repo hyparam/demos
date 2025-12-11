@@ -1,10 +1,11 @@
-import HighTable, { DataFrame, arrayDataFrame } from 'hightable'
+import HighTable, { DataFrame } from 'hightable'
 import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
 import { ReactNode, useEffect, useState } from 'react'
-import { AsyncDataSource, executeSql } from 'squirreling'
+import { AsyncDataSource, executeSql, parseSql } from 'squirreling'
 import { parquetDataSource } from './parquetDataSource.js'
 import { countingBuffer } from './countingBuffer.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
+import { squirrelingDataFrame } from './squirrelingDataFrame.js'
 
 interface SqlErrorInfo {
   message: string
@@ -43,51 +44,42 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
     setSqlError(undefined)
 
     if (query.length > 2) {
-      async function updateQuery() {
-        if (!table) return
-        console.log(`Running SQL query "${query}"...`)
-        setQueryTime(undefined)
-        setFirstRowTime(undefined)
-        setQueryDf(arrayDataFrame([]))
+      if (!table) return
+      console.log(`Running SQL query "${query}"...`)
+      setQueryTime(undefined)
+      setFirstRowTime(undefined)
 
-        // TODO: Parse SQL query
-        // const parsedQuery = parseSql(query)
-
-        let results: Record<string, unknown>[] = []
-        const startTime = performance.now()
-        // TODO: Wrap data async from parquet
+      try {
+        const parsedQuery = parseSql(query)
         const rowGen = executeSql({
           tables: { table },
-          query,
+          query: parsedQuery,
         })
-        for await (const asyncRow of rowGen) {
-          const row: Record<string, unknown> = {}
-          for (const [key, value] of Object.entries(asyncRow)) {
-            row[key] = await value()
+        const resultsDf = squirrelingDataFrame(rowGen)
+
+        // Track timing via events
+        const startTime = performance.now()
+        let firstRowTracked = false
+        resultsDf.eventTarget?.addEventListener('numrowschange', () => {
+          if (!firstRowTracked) {
+            firstRowTracked = true
+            setFirstRowTime(performance.now() - startTime)
           }
-          if (!results.length) {
-            const elapsed = performance.now() - startTime
-            console.log(`First result for "${query}" in ${elapsed.toFixed(2)} ms`, row)
-            setFirstRowTime(elapsed)
-            const resultsDf = arrayDataFrame([row])
-            results = resultsDf._array
-            setQueryDf(resultsDf)
-          } else {
-            results.push(row)
-          }
-        }
-        const elapsed = performance.now() - startTime
-        setQueryTime(elapsed)
-        if (countedBuffer) setNetworkBytes(countedBuffer.bytes)
-        console.log(`Query result for "${query}" in ${elapsed.toFixed(2)} ms, ${results.length} results`, results)
-      }
-      void updateQuery().catch((err: unknown) => {
+          if (countedBuffer) setNetworkBytes(countedBuffer.bytes)
+        })
+        resultsDf.eventTarget?.addEventListener('resolve', () => {
+          setQueryTime(performance.now() - startTime)
+          if (countedBuffer) setNetworkBytes(countedBuffer.bytes)
+        })
+
+        setQueryDf(resultsDf)
+      } catch (err: unknown) {
         if (signal.aborted) return
         const message = err instanceof Error ? err.message : String(err)
         const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
         setSqlError({ message, positionStart, positionEnd })
         console.warn('SQL error:', err)
-      })
+      }
     } else {
       setQueryDf(df)
       setQueryTime(undefined)
@@ -95,7 +87,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
     }
 
     return () => { controller.abort(new Error('Query aborted')) }
-  }, [query, df, name, table, setError, countedBuffer])
+  }, [query, df, table, countedBuffer])
 
   // prepare parquet data source
   useEffect(() => {
