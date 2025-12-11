@@ -24,16 +24,16 @@ export default function Welcome(): ReactNode {
         <li>
           <a
             className="aws"
-            href="?key=https://s3.hyperparam.app/squirreling/wiki_1k.parquet">
-            s3://hyperparam/squirreling/wiki_1k.parquet
+            href="?key=https://s3.hyperparam.app/squirreling/wiki1k.parquet">
+            s3://hyperparam/squirreling/wiki1k.parquet
           </a>
           <a
             className="aws"
-            href="?key=https://s3.hyperparam.app/parquetindex/wiki_en200.parquet">
-            s3://hyperparam/parquetindex/wiki_en.parquet
+            href="?key=https://s3.hyperparam.app/wiki-en-00000-of-00041.parquet">
+            s3://hyperparam/wiki_en.parquet
           </a>
           <a
-            className="hf"
+            className="aws"
             href="?key=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fankislyakov/titanic/resolve/refs%252Fconvert%252Fparquet%2Fdefault%2Ftrain%2F0000.parquet">
             hf://ankislyakov/titanic/train/0000.parquet
           </a>

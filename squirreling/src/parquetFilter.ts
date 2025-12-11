@@ -3,7 +3,7 @@ import type { ParquetQueryOperator } from 'hyparquet/src/types.js'
 import type { BinaryNode, BinaryOp, ComparisonOp, ExprNode, InValuesNode, SqlPrimitive } from 'squirreling/src/types.js'
 
 /**
- * Converts a WHERE clause AST to hyparquet filter format.
+ * Converts a squirreling WHERE clause AST to hyparquet filter format.
  * Returns undefined if the expression cannot be fully converted.
  */
 export function whereToParquetFilter(where: ExprNode | undefined): ParquetQueryFilter | undefined {

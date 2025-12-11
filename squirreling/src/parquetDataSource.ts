@@ -1,33 +1,81 @@
-import type { AsyncBuffer, FileMetaData } from 'hyparquet'
-import type { AsyncDataSource, AsyncRow } from 'squirreling'
-import { whereToParquetFilter } from './parquetFilter'
-import { parquetPlan } from 'hyparquet/src/plan.js'
-import { asyncGroupToRows, readRowGroup } from 'hyparquet/src/rowgroup.js'
-import { AsyncRowGroup } from 'hyparquet/src/types.js'
+import { AsyncBuffer, Compressors, FileMetaData, parquetMetadataAsync, parquetReadObjects } from 'hyparquet'
+import { whereToParquetFilter } from './parquetFilter.js'
+import { AsyncDataSource, AsyncRow, SqlPrimitive } from 'squirreling'
+import { AsyncCells } from 'squirreling/src/types.js'
 
-export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData): AsyncDataSource {
+/**
+ * Creates a parquet data source for use with squirreling SQL engine.
+ */
+export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData | undefined, compressors: Compressors): AsyncDataSource {
   return {
-    async *getRows(hints): AsyncGenerator<AsyncRow> {
-      const options = {
-        file,
-        metadata,
-        columns: hints?.columns,
-        filter: whereToParquetFilter(hints?.where),
-      }
+    async *scan({ hints, signal }) {
+      metadata ??= await parquetMetadataAsync(file)
 
-      console.log('Reading parquet with columns', options.columns, 'filter', options.filter, 'limit', hints?.limit)
-      const plan = parquetPlan(options)
-      for (const subplan of plan.groups) {
-        const rg: AsyncRowGroup = readRowGroup(options, plan, subplan)
-        const rows = await asyncGroupToRows(rg, 0, rg.groupRows, undefined, 'object')
-        for (const asyncRow of rows) {
-          const row: AsyncRow = {}
-          for (const [key, value] of Object.entries(asyncRow)) {
-            row[key] = () => Promise.resolve(value)
+      // Convert WHERE AST to hyparquet filter format
+      const whereFilter = hints?.where && whereToParquetFilter(hints.where)
+      /** @type {ParquetQueryFilter | undefined} */
+      const filter = hints?.where ? whereFilter : undefined
+      const filterApplied = !filter || whereFilter
+
+      // Emit rows by row group
+      let groupStart = 0
+      let remainingLimit = hints?.limit ?? Infinity
+      for (const rowGroup of metadata.row_groups) {
+        if (signal?.aborted) break
+        const rowCount = Number(rowGroup.num_rows)
+
+        // Skip row groups by offset if where is fully applied
+        let safeOffset = 0
+        let safeLimit = rowCount
+        if (filterApplied) {
+          if (hints?.offset !== undefined && groupStart < hints.offset) {
+            safeOffset = Math.min(rowCount, hints.offset - groupStart)
           }
-          yield row
+          safeLimit = Math.min(rowCount - safeOffset, remainingLimit)
+          if (safeLimit <= 0 && safeOffset < rowCount) break
         }
+        for (let i = 0; i < safeOffset; i++) {
+          // yield empty rows
+          yield asyncRow({})
+        }
+        if (safeOffset === rowCount) {
+          // no rows from this group, continue to next
+          groupStart += rowCount
+          continue
+        }
+
+        // Read objects from this row group
+        const data = await parquetReadObjects({
+          file,
+          metadata,
+          rowStart: groupStart + safeOffset,
+          rowEnd: groupStart + safeOffset + safeLimit,
+          columns: hints?.columns,
+          filter,
+          filterStrict: false,
+          compressors,
+          useOffsetIndex: true,
+        })
+
+        // Yield each row
+        for (const row of data) {
+          yield asyncRow(row)
+        }
+
+        remainingLimit -= data.length
+        groupStart += rowCount
       }
     },
   }
+}
+
+/**
+ * Creates an async row accessor that wraps a plain JavaScript object
+ */
+function asyncRow(obj: Record<string, SqlPrimitive>): AsyncRow {
+  const cells: AsyncCells = {}
+  for (const [key, value] of Object.entries(obj)) {
+    cells[key] = () => Promise.resolve(value)
+  }
+  return { columns: Object.keys(obj), cells }
 }
