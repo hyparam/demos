@@ -2,10 +2,11 @@ import HighTable, { DataFrame } from 'hightable'
 import { FileMetaData } from 'hyparquet'
 import { Dropdown } from 'hyperparam'
 import { ReactNode, useState } from 'react'
+import ParquetGrid from './ParquetGrid.js'
 import ParquetLayout from './ParquetLayout.js'
 import ParquetMetadata from './ParquetMetadata.js'
 
-type Lens = 'table' | 'metadata' | 'layout'
+type Lens = 'table' | 'metadata' | 'layout' | 'grid'
 
 export interface PageProps {
   metadata: FileMetaData
@@ -34,11 +35,13 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
         <button onClick={() => { setLens('table') }}>Table</button>
         <button onClick={() => { setLens('metadata') }}>Metadata</button>
         {byteLength && <button onClick={() => { setLens('layout') }}>Layout</button>}
+        <button onClick={() => { setLens('grid') }}>Grid</button>
       </Dropdown>
     </div>
     {lens === 'table' && <HighTable cacheKey={name} data={df} onError={setError} className="hightable" />}
     {lens === 'metadata' && <ParquetMetadata metadata={metadata} />}
     {lens === 'layout' && byteLength && <ParquetLayout byteLength={byteLength} metadata={metadata} />}
+    {lens === 'grid' && <ParquetGrid metadata={metadata} />}
   </>
 }
 
