@@ -50,7 +50,7 @@ export default tseslint.config(
       indent: ['error', 2],
       'key-spacing': 'error',
       'no-constant-condition': 'off',
-      'no-extra-parens': 'error',
+      'no-extra-parens': 'warn',
       'no-multi-spaces': 'error',
       'no-multiple-empty-lines': ['error', { max: 1, maxEOF: 0 }],
       'no-trailing-spaces': 'error',

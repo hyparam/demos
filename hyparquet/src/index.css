@@ -348,3 +348,62 @@ input[type="file"] {
   background-color: #22222b;
   padding-left: 20px;
 }
+
+/* ParquetGrid styles */
+.parquet-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px;
+  padding: 10px 0;
+  overflow: auto;
+  align-items: center;
+}
+.grid-label {
+  width: 24px;
+  font-size: 12px;
+  text-align: right;
+  color: #888;
+}
+.grid-row-wrapper {
+  display: contents;
+}
+.grid-row {
+  display: grid;
+  gap: 2px;
+  height: 24px;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.column-cell {
+  height: 100%;
+}
+.column-cell.even {
+  background-color: rgba(100, 80, 180, 0.1);
+}
+.column-cell.odd {
+  background-color: rgba(80, 160, 220, 0.1);
+}
+.column-cell.even .column-bar {
+  height: 100%;
+  background-color: rgba(100, 80, 180, 0.7);
+}
+.column-cell.odd .column-bar {
+  height: 100%;
+  background-color: rgba(80, 160, 220, 0.7);
+}
+.column-cell:hover .column-bar {
+  filter: brightness(1.2);
+}
+.column-label {
+  font-size: 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 2px;
+}
+.column-label.even {
+  background-color: rgba(100, 80, 180, 0.15);
+}
+.column-label.odd {
+  background-color: rgba(80, 160, 220, 0.15);
+}
