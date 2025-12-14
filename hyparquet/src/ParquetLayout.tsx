@@ -17,20 +17,31 @@ export default function ParquetLayout({ byteLength, metadata }: LayoutProps): Re
   const metadataStart = byteLength - metadata.metadata_length - 4
   const metadataEnd = byteLength - 4
 
+  // Collect all layout items with their byte ranges
+  const layoutItems = collectLayoutItems(metadata)
+
   return <div className='viewer'>
     <div className='layout'>
-      <Cell name='PAR1' start={0n} end={4n} />
-      <RowGroups metadata={metadata} />
-      <ColumnIndexes metadata={metadata} />
-      <Cell name='Metadata' start={metadataStart} end={metadataEnd} />
-      <Cell name='PAR1' start={metadataEnd} end={byteLength} />
+      <Cell name='PAR1' start={0n} end={4n} className="magic" />
+      {layoutItems.map((item, index) => (
+        <LayoutItem key={index} item={item} />
+      ))}
+      <Cell name='Metadata' start={metadataStart} end={metadataEnd} className="metadata" />
+      <Cell name='PAR1' start={metadataEnd} end={byteLength} className="magic" />
     </div>
   </div>
 }
 
-function Cell<N extends bigint | number>({ name, start, end }: { name: string, start: N, end: N }) {
+interface CellProps<N extends bigint | number> {
+  name: string
+  start: N
+  end: N
+  className?: string
+}
+
+function Cell<N extends bigint | number>({ name, start, end, className }: CellProps<N>) {
   const bytes = end - start
-  return <div className="cell">
+  return <div className={className ? `cell ${className}` : 'cell'}>
     <label>{name}</label>
     <ul>
       <li>start {start.toLocaleString()}</li>
@@ -50,19 +61,90 @@ function Group({ children, name, bytes }: { children: ReactNode, name?: string, 
   </div>
 }
 
-function RowGroups({ metadata }: { metadata: FileMetaData }) {
-  return <>
-    {metadata.row_groups.map((rowGroup, i) =>
-      <Group key={i} name={`RowGroup ${i}`} bytes={rowGroup.total_byte_size}>
-        {rowGroup.columns.map((column, j) =>
-          <Column key={j} column={column} />,
-        )}
-      </Group>,
-    )}
-  </>
+interface RowGroupItem {
+  type: 'rowgroup'
+  start: bigint
+  groupIndex: number
+  columns: ColumnChunk[]
+  totalByteSize: bigint
 }
 
-function Column({ key, column }: { key: number, column: ColumnChunk }) {
+interface IndexItem {
+  type: 'index'
+  start: bigint
+  end: bigint
+  name: string
+}
+
+type LayoutItemType = RowGroupItem | IndexItem
+
+function collectLayoutItems(metadata: FileMetaData): LayoutItemType[] {
+  const items: LayoutItemType[] = []
+
+  // Add row groups
+  for (let groupIndex = 0; groupIndex < metadata.row_groups.length; groupIndex++) {
+    const rowGroup = metadata.row_groups[groupIndex]
+    // Find the earliest start offset among all columns in the row group
+    let start = BigInt(Number.MAX_SAFE_INTEGER)
+    for (const column of rowGroup.columns) {
+      if (column.meta_data) {
+        const [colStart] = getColumnRange(column.meta_data)
+        if (colStart < start) start = colStart
+      }
+    }
+    items.push({
+      type: 'rowgroup',
+      start,
+      groupIndex,
+      columns: rowGroup.columns,
+      totalByteSize: rowGroup.total_byte_size,
+    })
+  }
+
+  // Add column and offset indexes
+  for (let groupIndex = 0; groupIndex < metadata.row_groups.length; groupIndex++) {
+    const rowGroup = metadata.row_groups[groupIndex]
+    for (const column of rowGroup.columns) {
+      const columnName = column.meta_data?.path_in_schema.join('.')
+      if (column.column_index_offset) {
+        items.push({
+          type: 'index',
+          start: column.column_index_offset,
+          end: column.column_index_offset + BigInt(column.column_index_length ?? 0),
+          name: `ColumnIndex\nRowGroup ${groupIndex}, Column '${columnName}'`,
+        })
+      }
+      if (column.offset_index_offset) {
+        items.push({
+          type: 'index',
+          start: column.offset_index_offset,
+          end: column.offset_index_offset + BigInt(column.offset_index_length ?? 0),
+          name: `OffsetIndex\nRowGroup ${groupIndex}, Column '${columnName}'`,
+        })
+      }
+    }
+  }
+
+  // Sort all items by start offset
+  items.sort((a, b) => Number(a.start - b.start))
+  return items
+}
+
+function LayoutItem({ item }: { item: LayoutItemType }) {
+  if (item.type === 'rowgroup') {
+    return (
+      <Group name={`RowGroup ${item.groupIndex}`} bytes={item.totalByteSize}>
+        {item.columns.map((column, j) =>
+          <Column key={j} column={column} />,
+        )}
+      </Group>
+    )
+  } else {
+    return <Cell name={item.name} start={item.start} end={item.end} className="index" />
+  }
+}
+
+function Column({ column }: { column: ColumnChunk }) {
 
   if (!column.meta_data) return null
   const { meta_data } = column
@@ -82,44 +164,10 @@ function Column({ key, column }: { key: number, column: ColumnChunk }) {
   )
 
   return <Group
-    key={key}
-    name={`Column ${column.meta_data.path_in_schema.join('.')}`}
+    name={`Column '${column.meta_data.path_in_schema.join('.')}'`}
     bytes={column.meta_data.total_compressed_size}>
     {children}
   </Group>
-}
-
-function ColumnIndexes({ metadata }: { metadata: FileMetaData }) {
-  // find column and offset indexes
-  const indexPages = []
-  for (const rowGroup of metadata.row_groups) {
-    for (const column of rowGroup.columns) {
-      const columnName = column.meta_data?.path_in_schema.join('.')
-      if (column.column_index_offset) {
-        indexPages.push({
-          name: `ColumnIndex ${columnName}`,
-          start: column.column_index_offset,
-          end: column.column_index_offset + BigInt(column.column_index_length ?? 0),
-        })
-      }
-      if (column.offset_index_offset) {
-        indexPages.push({
-          name: `OffsetIndex ${columnName}`,
-          start: column.offset_index_offset,
-          end: column.offset_index_offset + BigInt(column.offset_index_length ?? 0),
-        })
-      }
-    }
-  }
-
-  if (indexPages.length === 0) return null
-  return (
-    <Group name='ColumnIndexes'>
-      {indexPages.map(({ name, start, end }, index) =>
-        <Cell key={index} name={name} start={start} end={end} />,
-      )}
-    </Group>
-  )
 }
 
 /**
