@@ -12,7 +12,7 @@ jobs:
       run:
         working-directory: ${{ inputs.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm i
       - run: npm run lint
   
@@ -22,7 +22,7 @@ jobs:
       run:
         working-directory: ${{ inputs.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm i
       - run: npm run typecheck
   
@@ -32,7 +32,7 @@ jobs:
       run:
         working-directory: ${{ inputs.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm i
       - run: npm run coverage
   
@@ -42,6 +42,6 @@ jobs:
       run:
         working-directory: ${{ inputs.workspace }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: npm i
       - run: npm run build
