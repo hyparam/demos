@@ -7,6 +7,7 @@ import { parquetDataSource } from './parquetDataSource.js'
 import { countingBuffer } from './countingBuffer.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
 import { squirrelingDataFrame } from './squirrelingDataFrame.js'
+import ParquetGridMini from './ParquetGridMini.js'
 
 interface SqlErrorInfo {
   message: string
@@ -29,7 +30,7 @@ export interface PageProps {
  * @param {Object} props
  * @returns {ReactNode}
  */
-export default function Page({ df, name, byteLength, setError }: PageProps): ReactNode {
+export default function Page({ metadata, df, name, byteLength, setError }: PageProps): ReactNode {
   const [query, setQuery] = useState<string>('SELECT * FROM table LIMIT 5')
   const [queryDf, setQueryDf] = useState<DataFrame>(df)
   const [queryTime, setQueryTime] = useState<number | undefined>()
@@ -111,21 +112,24 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       </div>
     </div>
     <div className='sql-container'>
-      <HighlightedTextArea
-        value={query}
-        onChange={setQuery}
-        placeholder="SQL query..."
-        className={sqlError ? 'sql-error' : ''}
-        highlightStart={sqlError?.positionStart}
-        highlightEnd={sqlError?.positionEnd}
-      />
-      <div className='query-stats'>
-        {sqlError && <span className='sql-error-msg'>{sqlError.message}</span>}
-        <span className='query-times'>
-          {queryTime !== undefined && <span>query: {queryTime.toFixed(0)} ms</span>}
-          {firstRowTime !== undefined && <span>first: {firstRowTime.toFixed(0)} ms</span>}
-        </span>
+      <div className='sql-input-area'>
+        <HighlightedTextArea
+          value={query}
+          onChange={setQuery}
+          placeholder="SQL query..."
+          className={sqlError ? 'sql-error' : ''}
+          highlightStart={sqlError?.positionStart}
+          highlightEnd={sqlError?.positionEnd}
+        />
+        <div className='query-stats'>
+          {sqlError && <span className='sql-error-msg'>{sqlError.message}</span>}
+          <span className='query-times'>
+            {queryTime !== undefined && <span>query: {queryTime.toFixed(0)} ms</span>}
+            {firstRowTime !== undefined && <span>first: {firstRowTime.toFixed(0)} ms</span>}
+          </span>
+        </div>
       </div>
+      <ParquetGridMini metadata={metadata} />
     </div>
     <HighTable
       focus={false}
