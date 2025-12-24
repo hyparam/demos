@@ -16,7 +16,7 @@ export default function App(): ReactNode {
   const [pageProps, setPageProps] = useState<PageProps>()
 
   const setUnknownError = useCallback((e: unknown) => {
-    setError(e instanceof Error ? e : new Error(String(e)))
+    setError(e === undefined || e instanceof Error ? e : new Error('Unknown error' + JSON.stringify(e)))
   }, [])
 
   const setAsyncBuffer = useCallback(async function setAsyncBuffer(name: string, from: AsyncBufferFrom) {

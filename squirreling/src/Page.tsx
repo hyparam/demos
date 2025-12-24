@@ -1,7 +1,7 @@
 import HighTable, { DataFrame } from 'hightable'
 import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
 import { compressors } from 'hyparquet-compressors'
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { AsyncDataSource, executeSql, parseSql } from 'squirreling'
 import { parquetDataSource } from './parquetDataSource.js'
 import { type ByteRange, countingBuffer } from './countingBuffer.js'
@@ -44,16 +44,22 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
   // Compute syntax highlighting
   const highlights = useMemo(() => highlightSql(query), [query])
 
+  // Wrap setQuery to clear errors and timing on query change
+  const handleQueryChange = useCallback((newQuery: string) => {
+    setSqlError(undefined)
+    setQueryTime(undefined)
+    setFirstRowTime(undefined)
+    setQuery(newQuery)
+    setError(undefined)
+  }, [setError])
+
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
-    setSqlError(undefined)
 
     if (query.length > 2) {
       if (!table) return
       console.log(`Running SQL query "${query}"...`)
-      setQueryTime(undefined)
-      setFirstRowTime(undefined)
 
       try {
         const parsedQuery = parseSql({ query })
@@ -61,7 +67,12 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
           tables: { table },
           query: parsedQuery,
         })
-        const resultsDf = squirrelingDataFrame(rowGen)
+        const sourceColumns = df.columnDescriptors.map(c => c.name)
+        const resultsDf = squirrelingDataFrame({
+          rowGen,
+          columns: parsedQuery.columns,
+          sourceColumns,
+        })
 
         // Track timing via events
         const startTime = performance.now()
@@ -123,7 +134,7 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
       <div className='sql-input-area'>
         <HighlightedTextArea
           value={query}
-          onChange={setQuery}
+          onChange={handleQueryChange}
           placeholder="SQL query..."
           className={sqlError ? 'sql-error' : ''}
           highlights={highlights}

@@ -18,24 +18,34 @@ export default function Welcome(): ReactNode {
         This demo uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance table viewing.
       </p>
       <p>
-        Example file:
+        Example files:
       </p>
       <ul className="quick-links">
         <li>
           <a
             className="aws"
             href="?key=https://s3.hyperparam.app/squirreling/wiki1k.parquet">
-            s3://hyperparam/squirreling/wiki1k.parquet
+            s3://wiki1k.parquet
           </a>
           <a
             className="aws"
             href="?key=https://s3.hyperparam.app/wiki-en-00000-of-00041.parquet">
-            s3://hyperparam/wiki_en.parquet
+            s3://wiki_en.parquet
           </a>
           <a
             className="aws"
+            href="?key=https://s3.hyperparam.app/squirreling/tpch-lineitem.parquet">
+            s3://tpch-lineitem.parquet
+          </a>
+          <a
+            className="aws"
+            href="?key=https://s3.hyperparam.app/squirreling/VendorPayments2527.parquet">
+            s3://VendorPayments2527.parquet
+          </a>
+          <a
+            className="hf"
             href="?key=https%3A%2F%2Fhuggingface.co%2Fdatasets%2Fankislyakov/titanic/resolve/refs%252Fconvert%252Fparquet%2Fdefault%2Ftrain%2F0000.parquet">
-            hf://ankislyakov/titanic/train/0000.parquet
+            hf://titanic.parquet
           </a>
         </li>
       </ul>

@@ -301,6 +301,9 @@ main {
 .aws {
   background: url('assets/s3.svg') no-repeat 8px center;
 }
+.hf {
+  background: url('assets/huggingface.svg') no-repeat 8px center;
+}
 .badges {
   display: flex;
   gap: 10px;
