@@ -4,7 +4,7 @@ import { compressors } from 'hyparquet-compressors'
 import { ReactNode, useEffect, useState } from 'react'
 import { AsyncDataSource, executeSql, parseSql } from 'squirreling'
 import { parquetDataSource } from './parquetDataSource.js'
-import { countingBuffer } from './countingBuffer.js'
+import { type ByteRange, countingBuffer } from './countingBuffer.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
 import { squirrelingDataFrame } from './squirrelingDataFrame.js'
 import ParquetGridMini from './ParquetGridMini.js'
@@ -38,6 +38,7 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
   const [table, setTable] = useState<AsyncDataSource | undefined>()
   const [sqlError, setSqlError] = useState<SqlErrorInfo | undefined>()
   const [networkBytes, setNetworkBytes] = useState<number>(0)
+  const [downloadedRanges, setDownloadedRanges] = useState<ByteRange[]>([])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -92,8 +93,11 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
   useEffect(() => {
     async function fetchData() {
       const asyncBuffer = await asyncBufferFromUrl({ url: name })
-      const counted = countingBuffer(asyncBuffer, (start, end) => {
-        setNetworkBytes(prev => prev + (end ?? asyncBuffer.byteLength) - start)
+      const counted = countingBuffer(asyncBuffer, ranges => {
+        // Calculate total bytes from all ranges
+        const totalBytes = ranges.reduce((sum, r) => sum + (r.end - r.start), 0)
+        setNetworkBytes(totalBytes)
+        setDownloadedRanges([...ranges])
       })
       const file = cachedAsyncBuffer(counted)
       const metadata = await parquetMetadataAsync(file)
@@ -129,7 +133,7 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
           </span>
         </div>
       </div>
-      <ParquetGridMini metadata={metadata} />
+      <ParquetGridMini metadata={metadata} downloadedRanges={downloadedRanges} />
     </div>
     <HighTable
       focus={false}
