@@ -394,17 +394,62 @@ main {
 .cell-mini {
   height: 100%;
 }
-.cell-mini.even {
+/* Pending (undownloaded) cells - border and light fill */
+.cell-mini.even.pending {
+  background-color: rgba(100, 80, 180, 0.08);
+}
+.cell-mini.odd.pending {
+  background-color: rgba(80, 160, 220, 0.08);
+}
+.cell-mini.even.pending .bar-mini {
+  height: 100%;
+  background-color: rgba(100, 80, 180, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(100, 80, 180, 0.4);
+}
+.cell-mini.odd.pending .bar-mini {
+  height: 100%;
+  background-color: rgba(80, 160, 220, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(80, 160, 220, 0.4);
+}
+/* Partial (partly downloaded) cells - striped bar */
+.cell-mini.even.partial {
+  background-color: rgba(100, 80, 180, 0.08);
+}
+.cell-mini.odd.partial {
+  background-color: rgba(80, 160, 220, 0.08);
+}
+.cell-mini.even.partial .bar-mini {
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(100, 80, 180, 0.5),
+    rgba(100, 80, 180, 0.5) 4px,
+    rgba(100, 80, 180, 0.25) 4px,
+    rgba(100, 80, 180, 0.25) 8px
+  );
+}
+.cell-mini.odd.partial .bar-mini {
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(80, 160, 220, 0.5),
+    rgba(80, 160, 220, 0.5) 4px,
+    rgba(80, 160, 220, 0.25) 4px,
+    rgba(80, 160, 220, 0.25) 8px
+  );
+}
+/* Downloaded cells - solid fill */
+.cell-mini.even.downloaded {
   background-color: rgba(100, 80, 180, 0.15);
 }
-.cell-mini.odd {
+.cell-mini.odd.downloaded {
   background-color: rgba(80, 160, 220, 0.15);
 }
-.cell-mini.even .bar-mini {
+.cell-mini.even.downloaded .bar-mini {
   height: 100%;
   background-color: rgba(100, 80, 180, 0.7);
 }
-.cell-mini.odd .bar-mini {
+.cell-mini.odd.downloaded .bar-mini {
   height: 100%;
   background-color: rgba(80, 160, 220, 0.7);
 }
