@@ -1,11 +1,12 @@
 import HighTable, { DataFrame } from 'hightable'
 import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
 import { compressors } from 'hyparquet-compressors'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
 import { AsyncDataSource, executeSql, parseSql } from 'squirreling'
 import { parquetDataSource } from './parquetDataSource.js'
 import { type ByteRange, countingBuffer } from './countingBuffer.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
+import { highlightSql } from './sqlHighlight.js'
 import { squirrelingDataFrame } from './squirrelingDataFrame.js'
 import ParquetGridMini from './ParquetGridMini.js'
 
@@ -39,6 +40,9 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
   const [sqlError, setSqlError] = useState<SqlErrorInfo | undefined>()
   const [networkBytes, setNetworkBytes] = useState<number>(0)
   const [downloadedRanges, setDownloadedRanges] = useState<ByteRange[]>([])
+
+  // Compute syntax highlighting
+  const highlights = useMemo(() => highlightSql(query), [query])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -122,8 +126,9 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
           onChange={setQuery}
           placeholder="SQL query..."
           className={sqlError ? 'sql-error' : ''}
-          highlightStart={sqlError?.positionStart}
-          highlightEnd={sqlError?.positionEnd}
+          highlights={highlights}
+          errorStart={sqlError?.positionStart}
+          errorEnd={sqlError?.positionEnd}
         />
         <div className='query-stats'>
           {sqlError && <span className='sql-error-msg'>{sqlError.message}</span>}

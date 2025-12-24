@@ -174,10 +174,16 @@ main {
   font: 14px monospace;
   line-height: normal;
   letter-spacing: normal;
-  min-height: 60px;
+  min-height: 80px;
   padding: 8px 12px 24px 12px;
-  resize: vertical;
   width: 100%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.sql-input:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
 }
 .sql-input:focus {
   border: none;
@@ -188,50 +194,24 @@ main {
   border-bottom-color: red;
 }
 
-/* SQL Input Overlay Container */
-.sql-input-wrapper {
-  position: relative;
-  width: 100%;
-}
-
-/* Background layer for text highlighting */
-.sql-input-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border: none;
-  border-bottom: 1px solid transparent;
-  font: 14px monospace;
-  line-height: normal;
-  letter-spacing: normal;
-  padding: 8px 12px 24px 12px;
-  min-height: 60px;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  overflow: hidden;
-  color: #333;
-  pointer-events: none;
-}
-
-/* Textarea overlay - transparent background */
-.sql-input-wrapper .sql-input {
-  position: relative;
-  background: transparent;
-  color: transparent;
-  caret-color: #333;
-}
-
 /* Error highlight with wavy red underline */
 .sql-error-highlight {
   font: inherit;
-  color: inherit;
   text-decoration: underline wavy #cc3333;
   text-decoration-skip-ink: none;
   text-underline-offset: 2px;
 }
+
+/* SQL Syntax Highlighting */
+.sql-input span {
+  font: inherit;
+}
+.sql-keyword { color: #0000ff; }
+.sql-function { color: #795e26; }
+.sql-string { color: #a31515; }
+.sql-number { color: #098658; }
+.sql-operator { color: #000000; }
+.sql-identifier { color: #001080; }
 
 .query-stats {
   bottom: 4px;
