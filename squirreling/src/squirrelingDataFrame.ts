@@ -1,17 +1,56 @@
-import type { AsyncRow } from 'squirreling'
+import type { AsyncRow, SelectStatement } from 'squirreling'
+
+type SelectColumn = SelectStatement['columns'][number]
 import type { ColumnDescriptor, DataFrame, DataFrameEvents } from 'hightable/dataframe'
 import { createEventTarget } from 'hightable/dataframe'
+
+interface SquirrelingDataFrameOptions {
+  rowGen: AsyncGenerator<AsyncRow>
+  columns?: SelectColumn[]
+  sourceColumns?: string[]
+}
+
+/**
+ * Resolve select columns to column names deterministically.
+ * Handles both * (star) columns and derived columns with aliases.
+ */
+function resolveColumnNames(columns: SelectColumn[], sourceColumns: string[]): string[] {
+  const names: string[] = []
+  for (const col of columns) {
+    if (col.kind === 'star') {
+      // SELECT * - use all source columns
+      names.push(...sourceColumns)
+    } else {
+      // Derived column - use alias or expression name
+      if (col.alias) {
+        names.push(col.alias)
+      } else if (col.expr.type === 'identifier') {
+        names.push(col.expr.name)
+      } else if (col.expr.type === 'function') {
+        names.push(col.expr.name)
+      } else {
+        names.push('?')
+      }
+    }
+  }
+  return names
+}
 
 /**
  * Creates a hightable DataFrame from a squirreling async row generator.
  * Rows and cells are loaded lazily - only when fetch() is called.
  */
-export function squirrelingDataFrame(
-  rowGen: AsyncGenerator<AsyncRow>,
-): DataFrame {
+export function squirrelingDataFrame({
+  rowGen,
+  columns,
+  sourceColumns,
+}: SquirrelingDataFrameOptions): DataFrame {
   const asyncRows: AsyncRow[] = []
   const resolvedCells = new Map<string, unknown>()
-  let columnDescriptors: ColumnDescriptor[] = []
+  // Compute column descriptors deterministically if columns are provided
+  let columnDescriptors: ColumnDescriptor[] = columns && sourceColumns
+    ? resolveColumnNames(columns, sourceColumns).map(name => ({ name }))
+    : []
   let generatorDone = false
   const eventTarget = createEventTarget<DataFrameEvents>()
 
@@ -19,17 +58,18 @@ export function squirrelingDataFrame(
   async function discoverRows(targetRow: number, signal?: AbortSignal) {
     while (asyncRows.length <= targetRow && !generatorDone) {
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
-      const { value, done } = await rowGen.next()
-      if (done) {
+      const result = await rowGen.next()
+      if (result.done) {
         generatorDone = true
         eventTarget.dispatchEvent(new CustomEvent('numrowschange'))
         break
       }
-      // Set columns from first row
-      if (asyncRows.length === 0) {
-        columnDescriptors = value.columns.map(name => ({ name }))
+      const row: AsyncRow = result.value
+      // Set columns from first row (fallback if not provided upfront)
+      if (asyncRows.length === 0 && columnDescriptors.length === 0) {
+        columnDescriptors = row.columns.map(name => ({ name }))
       }
-      asyncRows.push(value)
+      asyncRows.push(row)
       eventTarget.dispatchEvent(new CustomEvent('numrowschange'))
     }
   }
