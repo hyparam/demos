@@ -34,7 +34,7 @@ export default function ParquetGrid({ metadata }: GridProps): ReactNode {
   return (
     <div className="parquet-grid">
       {/* Header row */}
-      <div className="grid-label"></div>
+      <div className="grid-label">Row group</div>
       <div className="grid-row" style={{ gridTemplateColumns }}>
         {columnNames.map((name, j) => (
           <div
