@@ -23,9 +23,9 @@ export default function ParquetLayout({ byteLength, metadata }: LayoutProps): Re
   return <div className='viewer'>
     <div className='layout'>
       <Cell name='PAR1' start={0n} end={4n} className="magic" />
-      {layoutItems.map((item, index) => (
-        <LayoutItem key={index} item={item} />
-      ))}
+      {layoutItems.map((item, index) =>
+        <LayoutItem key={index} item={item} />,
+      )}
       <Cell name='Metadata' start={metadataStart} end={metadataEnd} className="metadata" />
       <Cell name='PAR1' start={metadataEnd} end={byteLength} className="magic" />
     </div>

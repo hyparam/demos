@@ -36,19 +36,19 @@ export default function ParquetGrid({ metadata }: GridProps): ReactNode {
       {/* Header row */}
       <div className="grid-label">Row group</div>
       <div className="grid-row" style={{ gridTemplateColumns }}>
-        {columnNames.map((name, j) => (
+        {columnNames.map((name, j) =>
           <div
             key={j}
             className={`column-label ${j % 2 === 0 ? 'even' : 'odd'}`}
             title={`Column: ${name}\n${columnTotals[j].toLocaleString()} bytes`}
           >
             {name}
-          </div>
-        ))}
+          </div>,
+        )}
       </div>
 
       {/* Data rows */}
-      {metadata.row_groups.map((rowGroup, i) => (
+      {metadata.row_groups.map((rowGroup, i) =>
         <div key={i} className="grid-row-wrapper">
           <div className="grid-label">{i}</div>
           <div className="grid-row" style={{ gridTemplateColumns }}>
@@ -78,8 +78,8 @@ export default function ParquetGrid({ metadata }: GridProps): ReactNode {
               )
             })}
           </div>
-        </div>
-      ))}
+        </div>,
+      )}
     </div>
   )
 }
