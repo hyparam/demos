@@ -14,6 +14,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           ['Mirror', '/mirror'],
           ['Unstyled', '/unstyled'],
           ['Custom Theme', '/custom-theme'],
+          ['Large', '/large'],
         ].map(([label, path]) => <NavLink key={path} to={path}
           className={ ({ isActive }) => isActive ? 'link active' : 'link' }
         >{label}</NavLink>,

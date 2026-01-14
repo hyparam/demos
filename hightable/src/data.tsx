@@ -20,7 +20,6 @@ function delayResolve<T>({ value, ms, signal }: {value: T, ms?: number, signal?:
   ))
 }
 
-const numRows = 10_000
 const header = ['ID', 'Name', 'Age', 'UUID', 'Text', 'JSON']
 const eventTarget = createEventTarget<DataFrameEvents>()
 const cellCache = new Map<string, ResolvedValue[]>(header.map(column => [column, []]))
@@ -44,54 +43,60 @@ function generateValue({ row, column }: { row: number, column: string }): string
     throw new Error(`Unknown column: ${column}`)
   }}
 
-const mockData: DataFrame = {
-  columnDescriptors: header.map(column => ({ name: column })),
-  numRows,
-  getCell: ({ row, column }) => {
-    return cellCache.get(column)?.[row]
-  },
-  getRowNumber: ({ row }) => {
-    return rowNumberCache[row]
-  },
-  fetch: async ({ rowEnd, rowStart, columns, signal }) => {
-    checkSignal(signal)
-    const promises: Promise<void>[] = []
-    for (let row = rowStart; row < rowEnd; row++) {
+function generateData({ numRows }: { numRows?: number } = {}): DataFrame {
+  numRows ??= 10_000
+  const mockData: DataFrame = {
+    columnDescriptors: header.map(column => ({ name: column })),
+    numRows,
+    getCell: ({ row, column }) => {
+      return cellCache.get(column)?.[row]
+    },
+    getRowNumber: ({ row }) => {
+      return rowNumberCache[row]
+    },
+    fetch: async ({ rowEnd, rowStart, columns, signal }) => {
+      checkSignal(signal)
+      const promises: Promise<void>[] = []
+      for (let row = rowStart; row < rowEnd; row++) {
       // fetch row number
-      if (!rowNumberCache[row]) {
-        promises.push(
-          delayResolve({ value: row, signal })
-            .then(resolved => {
-              rowNumberCache[row] = resolved
-              eventTarget.dispatchEvent(new CustomEvent('resolve'))
-            }),
-        )
-      }
-
-      // fetch cells
-      for (const column of columns ?? []) {
-        if (!header.includes(column)) {
-          throw new Error(`Unknown column: ${column}`)
-        }
-        if (!cellCache.get(column)?.[row]) {
+        if (!rowNumberCache[row]) {
           promises.push(
-            delayResolve({ value: generateValue({ row, column }), signal })
+            delayResolve({ value: row, signal })
               .then(resolved => {
-                const columnCache = cellCache.get(column)
-                if (!columnCache) {
-                  throw new Error(`Column cache not found for: ${column}`)
-                }
-                columnCache[row] = resolved
+                rowNumberCache[row] = resolved
                 eventTarget.dispatchEvent(new CustomEvent('resolve'))
               }),
           )
         }
-      }
-    }
 
-    await Promise.all(promises)
-  },
-  eventTarget,
+        // fetch cells
+        for (const column of columns ?? []) {
+          if (!header.includes(column)) {
+            throw new Error(`Unknown column: ${column}`)
+          }
+          if (!cellCache.get(column)?.[row]) {
+            promises.push(
+              delayResolve({ value: generateValue({ row, column }), signal })
+                .then(resolved => {
+                  const columnCache = cellCache.get(column)
+                  if (!columnCache) {
+                    throw new Error(`Column cache not found for: ${column}`)
+                  }
+                  columnCache[row] = resolved
+                  eventTarget.dispatchEvent(new CustomEvent('resolve'))
+                }),
+            )
+          }
+        }
+      }
+
+      await Promise.all(promises)
+    },
+    eventTarget,
+  }
+
+  return sortableDataFrame(mockData)
 }
 
-export const data = sortableDataFrame(mockData)
+export const data = generateData({ numRows: 10000 })
+export const largeData = generateData({ numRows: 100_000_000 })
