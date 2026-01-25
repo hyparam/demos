@@ -32,7 +32,7 @@ export interface PageProps {
  * @returns {ReactNode}
  */
 export default function Page({ metadata, df, name, byteLength, setError }: PageProps): ReactNode {
-  const [query, setQuery] = useState<string>('SELECT * FROM table LIMIT 5')
+  const [query, setQuery] = useState<string>('SELECT * FROM table LIMIT 500')
   const [queryDf, setQueryDf] = useState<DataFrame>(df)
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
@@ -46,63 +46,83 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
 
   // Wrap setQuery to clear errors and timing on query change
   const handleQueryChange = useCallback((newQuery: string) => {
-    setSqlError(undefined)
     setQueryTime(undefined)
     setFirstRowTime(undefined)
     setQuery(newQuery)
     setError(undefined)
-  }, [setError])
+    setSqlError(undefined)
+    if (newQuery.length <= 2) {
+      setQueryDf(df)
+    }
+  }, [setError, df])
 
   useEffect(() => {
-    const controller = new AbortController()
-    const { signal } = controller
-
-    if (query.length > 2) {
-      if (!table) return
-      console.log(`Running SQL query "${query}"...`)
-
-      try {
-        const parsedQuery = parseSql({ query })
-        const rowGen = executeSql({
-          tables: { table },
-          query: parsedQuery,
-        })
-        const sourceColumns = df.columnDescriptors.map(c => c.name)
-        const resultsDf = squirrelingDataFrame({
-          rowGen,
-          columns: parsedQuery.columns,
-          sourceColumns,
-        })
-
-        // Track timing via events
-        const startTime = performance.now()
-        let firstRowTracked = false
-        resultsDf.eventTarget?.addEventListener('numrowschange', () => {
-          if (!firstRowTracked) {
-            firstRowTracked = true
-            setFirstRowTime(performance.now() - startTime)
-          }
-        })
-        resultsDf.eventTarget?.addEventListener('resolve', () => {
-          setQueryTime(performance.now() - startTime)
-        })
-
-        setQueryDf(resultsDf)
-      } catch (err: unknown) {
-        if (signal.aborted) return
-        const message = err instanceof Error ? err.message : String(err)
-        const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
-        setSqlError({ message, positionStart, positionEnd })
-        console.warn('SQL error:', err)
-      }
-    } else {
-      setQueryDf(df)
-      setQueryTime(undefined)
-      setFirstRowTime(undefined)
+    if (query.length <= 2 || !table) {
+      return
     }
 
-    return () => { controller.abort(new Error('Query aborted')) }
+    const abortController = new AbortController()
+
+    try {
+      // parse the query and execute it
+      const parsedQuery = parseSql({ query })
+      const rowGen = executeSql({
+        tables: { table },
+        query: parsedQuery,
+        signal: abortController.signal,
+      })
+      const sourceColumns = df.columnDescriptors.map(c => c.name)
+      const resultsDf = squirrelingDataFrame({
+        rowGen,
+        columns: parsedQuery.columns,
+        sourceColumns,
+      })
+      queueMicrotask(() => {
+        if (!abortController.signal.aborted) {
+          setQueryDf(resultsDf)
+        }
+      })
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
+      queueMicrotask(() => {
+        if (!abortController.signal.aborted) {
+          setSqlError({ message, positionStart, positionEnd })
+          setQueryDf(df)
+        }
+      })
+    }
+
+    return () => {
+      abortController.abort()
+    }
   }, [query, df, table])
+
+  useEffect(() => {
+    if (query.length <= 2 || !table || sqlError) return
+    const { eventTarget } = queryDf
+    if (!eventTarget) return
+
+    const startTime = performance.now()
+    let firstRowTracked = false
+    function handleNumRowsChange() {
+      if (!firstRowTracked) {
+        firstRowTracked = true
+        setFirstRowTime(performance.now() - startTime)
+      }
+    }
+    function handleResolve() {
+      setQueryTime(performance.now() - startTime)
+    }
+
+    eventTarget.addEventListener('numrowschange', handleNumRowsChange)
+    eventTarget.addEventListener('resolve', handleResolve)
+
+    return () => {
+      eventTarget.removeEventListener('numrowschange', handleNumRowsChange)
+      eventTarget.removeEventListener('resolve', handleResolve)
+    }
+  }, [query, table, queryDf, sqlError])
 
   // prepare parquet data source
   useEffect(() => {
