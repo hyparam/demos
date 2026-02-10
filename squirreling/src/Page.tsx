@@ -1,5 +1,6 @@
 import HighTable, { DataFrame } from 'hightable'
-import { FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
+import { FileMetaData, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
+import { AsyncBufferFrom, asyncBufferFrom } from 'hyperparam'
 import { compressors } from 'hyparquet-compressors'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { AsyncDataSource, executeSql, parseSql } from 'squirreling'
@@ -20,6 +21,7 @@ export interface PageProps {
   metadata: FileMetaData
   df: DataFrame
   name: string
+  from: AsyncBufferFrom
   byteLength?: number
   setError: (e: unknown) => void
 }
@@ -31,7 +33,7 @@ export interface PageProps {
  * @param {Object} props
  * @returns {ReactNode}
  */
-export default function Page({ metadata, df, name, byteLength, setError }: PageProps): ReactNode {
+export default function Page({ metadata, df, name, from, byteLength, setError }: PageProps): ReactNode {
   const [query, setQuery] = useState<string>('SELECT * FROM table LIMIT 500')
   const [queryDf, setQueryDf] = useState<DataFrame>(df)
   const [queryTime, setQueryTime] = useState<number | undefined>()
@@ -127,9 +129,8 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
   // prepare parquet data source
   useEffect(() => {
     async function fetchData() {
-      const asyncBuffer = await asyncBufferFromUrl({ url: name })
+      const asyncBuffer = await asyncBufferFrom(from)
       const counted = countingBuffer(asyncBuffer, ranges => {
-        // Calculate total bytes from all ranges
         const totalBytes = ranges.reduce((sum, r) => sum + (r.end - r.start), 0)
         setNetworkBytes(totalBytes)
         setDownloadedRanges([...ranges])
@@ -140,7 +141,7 @@ export default function Page({ metadata, df, name, byteLength, setError }: PageP
       setTable(table)
     }
     void fetchData().catch(setError)
-  }, [name, setError])
+  }, [from, setError])
 
   return <>
     <div className='top-header'>

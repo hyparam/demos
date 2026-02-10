@@ -49,6 +49,7 @@ export function countingBuffer(
 
   return {
     ...asyncBuffer,
+    byteLength: asyncBuffer.byteLength,
     slice(start: number, end?: number) {
       const actualEnd = end ?? asyncBuffer.byteLength
       addRange(start, actualEnd)

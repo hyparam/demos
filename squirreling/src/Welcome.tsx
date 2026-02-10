@@ -1,6 +1,20 @@
-import type { ReactNode } from 'react'
+import { type FormEvent, type ReactNode, useCallback, useRef } from 'react'
 
-export default function Welcome(): ReactNode {
+const exampleUrl = 'https://s3.hyperparam.app/wiki-en-00000-of-00041.parquet'
+
+interface Props {
+  setUrl: (url: string) => void
+}
+
+export default function Welcome({ setUrl }: Props): ReactNode {
+  const urlRef = useRef<HTMLInputElement>(null)
+
+  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    const value = urlRef.current?.value ?? ''
+    const url = value === '' ? exampleUrl : value
+    setUrl(url)
+  }, [setUrl])
 
   return <div id="welcome">
     <div>
@@ -17,6 +31,13 @@ export default function Welcome(): ReactNode {
       <p>
         This demo uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance table viewing.
       </p>
+      <form onSubmit={onSubmit}>
+        <label htmlFor="url">Drag and drop a parquet file (or url) to see your parquet data. 👀</label>
+        <div className="inputGroup">
+          <input id="url" type="url" ref={urlRef} required={false} placeholder={exampleUrl} />
+          <button>Load</button>
+        </div>
+      </form>
       <p>
         Example files:
       </p>

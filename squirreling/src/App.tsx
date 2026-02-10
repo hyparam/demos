@@ -6,6 +6,7 @@ import { sortableDataFrame } from 'hightable'
 import { byteLengthFromUrl, parquetMetadataAsync } from 'hyparquet'
 import { AsyncBufferFrom, asyncBufferFrom, parquetDataFrame } from 'hyperparam'
 import { useCallback, useEffect, useState } from 'react'
+import Dropzone from './Dropzone.js'
 import Layout from './Layout.js'
 
 export default function App(): ReactNode {
@@ -23,7 +24,7 @@ export default function App(): ReactNode {
     const asyncBuffer = await asyncBufferFrom(from)
     const metadata = await parquetMetadataAsync(asyncBuffer)
     const df = sortableDataFrame(parquetDataFrame(from, metadata))
-    setPageProps({ metadata, df, name, byteLength: from.byteLength, setError: setUnknownError })
+    setPageProps({ metadata, df, name, from, byteLength: from.byteLength, setError: setUnknownError })
   }, [setUnknownError])
 
   const onUrlDrop = useCallback(
@@ -43,7 +44,18 @@ export default function App(): ReactNode {
     }
   }, [url, pageProps, onUrlDrop])
 
+  function onFileDrop(file: File) {
+    // Clear query string
+    history.pushState({}, '', location.pathname)
+    setAsyncBuffer(file.name, { file, byteLength: file.size }).catch(setUnknownError)
+  }
+
   return <Layout error={error}>
-    {pageProps ? <Page {...pageProps} /> : <Welcome />}
+    <Dropzone
+      onError={(e) => { setError(e) }}
+      onFileDrop={onFileDrop}
+      onUrlDrop={onUrlDrop}>
+      {pageProps ? <Page {...pageProps} /> : <Welcome setUrl={onUrlDrop} />}
+    </Dropzone>
   </Layout>
 }
