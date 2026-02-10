@@ -5,6 +5,6 @@ import { largeData } from './data'
 
 export default function Large() {
   return <Layout>
-    <HighTable data={largeData} cacheKey="demo" />
+    <HighTable data={largeData} cacheKey="demo" focus={false} />
   </Layout>
 }
