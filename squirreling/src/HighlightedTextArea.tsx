@@ -103,10 +103,10 @@ export function HighlightedTextArea({
     }
   }
 
-  function handleBeforeInput(e: React.FormEvent<HTMLDivElement>) {
+  function handleBeforeInput(e: React.SyntheticEvent<HTMLDivElement>) {
     const inputEvent = e.nativeEvent as InputEvent
     // Block all formatting operations (bold, italic, underline, etc.)
-    if (inputEvent.inputType.startsWith('format')) {
+    if (inputEvent.inputType?.startsWith('format')) {
       e.preventDefault()
     }
   }

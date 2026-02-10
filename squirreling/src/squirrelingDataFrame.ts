@@ -1,8 +1,7 @@
-import type { AsyncRow, SelectStatement } from 'squirreling'
-
-type SelectColumn = SelectStatement['columns'][number]
+import type { AsyncRow } from 'squirreling'
+import type { SelectColumn } from 'squirreling/src/types.js'
 import type { ColumnDescriptor, DataFrame, DataFrameEvents } from 'hightable/dataframe'
-import { createEventTarget } from 'hightable/dataframe'
+import { createEventTarget, stringify } from 'hightable/dataframe'
 
 interface SquirrelingDataFrameOptions {
   rowGen: AsyncGenerator<AsyncRow>
@@ -28,6 +27,8 @@ function resolveColumnNames(columns: SelectColumn[], sourceColumns: string[]): s
         names.push(col.expr.name)
       } else if (col.expr.type === 'function') {
         names.push(col.expr.name)
+      } else if (col.expr.type === 'literal') {
+        names.push(stringify(col.expr.value) ?? '?')
       } else {
         names.push('?')
       }
@@ -103,7 +104,12 @@ export function squirrelingDataFrame({
         for (const col of cols) {
           const key = `${row}:${col}`
           if (!resolvedCells.has(key)) {
-            resolvedCells.set(key, await cells[col]())
+            try {
+              resolvedCells.set(key, await cells[col]())
+            } catch (err) {
+              console.error(`Error fetching cell ${col} in row ${row}:`, err, cells, columns)
+              resolvedCells.set(key, new Error(String(err)))
+            }
           }
         }
       }

@@ -8,62 +8,69 @@ import { AsyncCells } from 'squirreling/src/types.js'
  */
 export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData | undefined, compressors: Compressors): AsyncDataSource {
   return {
-    async *scan({ hints, signal }) {
-      metadata ??= await parquetMetadataAsync(file)
-
+    scan(hints) {
       // Convert WHERE AST to hyparquet filter format
-      const whereFilter = hints?.where && whereToParquetFilter(hints.where)
+      const whereFilter = hints.where && whereToParquetFilter(hints.where)
       /** @type {ParquetQueryFilter | undefined} */
-      const filter = hints?.where ? whereFilter : undefined
-      const filterApplied = !filter || whereFilter
+      const filter = hints.where ? whereFilter : undefined
+      const appliedWhere = Boolean(filter && whereFilter)
+      const appliedLimitOffset = !hints.where || appliedWhere
 
-      // Emit rows by row group
-      let groupStart = 0
-      let remainingLimit = hints?.limit ?? Infinity
-      for (const rowGroup of metadata.row_groups) {
-        if (signal?.aborted) break
-        const rowCount = Number(rowGroup.num_rows)
+      return {
+        rows: (async function* () {
+          metadata ??= await parquetMetadataAsync(file)
 
-        // Skip row groups by offset if where is fully applied
-        let safeOffset = 0
-        let safeLimit = rowCount
-        if (filterApplied) {
-          if (hints?.offset !== undefined && groupStart < hints.offset) {
-            safeOffset = Math.min(rowCount, hints.offset - groupStart)
+          // Emit rows by row group
+          let groupStart = 0
+          let remainingLimit = hints.limit ?? Infinity
+          for (const rowGroup of metadata.row_groups) {
+            if (hints.signal?.aborted) break
+            const rowCount = Number(rowGroup.num_rows)
+
+            // Skip row groups by offset if where is fully applied
+            let safeOffset = 0
+            let safeLimit = rowCount
+            if (appliedLimitOffset) {
+              if (hints.offset !== undefined && groupStart < hints.offset) {
+                safeOffset = Math.min(rowCount, hints.offset - groupStart)
+              }
+              safeLimit = Math.min(rowCount - safeOffset, remainingLimit)
+              if (safeLimit <= 0 && safeOffset < rowCount) break
+            }
+            for (let i = 0; i < safeOffset; i++) {
+              // yield empty rows
+              yield asyncRow({})
+            }
+            if (safeOffset === rowCount) {
+              // no rows from this group, continue to next
+              groupStart += rowCount
+              continue
+            }
+
+            // Read objects from this row group
+            const data = await parquetReadObjects({
+              file,
+              metadata,
+              rowStart: groupStart + safeOffset,
+              rowEnd: groupStart + safeOffset + safeLimit,
+              columns: hints.columns,
+              filter,
+              filterStrict: false,
+              compressors,
+              useOffsetIndex: true,
+            })
+
+            // Yield each row
+            for (const row of data) {
+              yield asyncRow(row)
+            }
+
+            remainingLimit -= data.length
+            groupStart += rowCount
           }
-          safeLimit = Math.min(rowCount - safeOffset, remainingLimit)
-          if (safeLimit <= 0 && safeOffset < rowCount) break
-        }
-        for (let i = 0; i < safeOffset; i++) {
-          // yield empty rows
-          yield asyncRow({})
-        }
-        if (safeOffset === rowCount) {
-          // no rows from this group, continue to next
-          groupStart += rowCount
-          continue
-        }
-
-        // Read objects from this row group
-        const data = await parquetReadObjects({
-          file,
-          metadata,
-          rowStart: groupStart + safeOffset,
-          rowEnd: groupStart + safeOffset + safeLimit,
-          columns: hints?.columns,
-          filter,
-          filterStrict: false,
-          compressors,
-          useOffsetIndex: true,
-        })
-
-        // Yield each row
-        for (const row of data) {
-          yield asyncRow(row)
-        }
-
-        remainingLimit -= data.length
-        groupStart += rowCount
+        })(),
+        appliedWhere,
+        appliedLimitOffset,
       }
     },
   }

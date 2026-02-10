@@ -1,6 +1,6 @@
-import { type FormEvent, type ReactNode, useCallback, useRef } from 'react'
+import { type ReactNode, type SyntheticEvent, useCallback, useRef } from 'react'
 
-const exampleUrl = 'https://s3.hyperparam.app/wiki-en-00000-of-00041.parquet'
+const exampleUrl = 'https://s3.hyperparam.app/squirreling/wine-reviews.parquet'
 
 interface Props {
   setUrl: (url: string) => void
@@ -9,7 +9,7 @@ interface Props {
 export default function Welcome({ setUrl }: Props): ReactNode {
   const urlRef = useRef<HTMLInputElement>(null)
 
-  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = useCallback((e: SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault()
     const value = urlRef.current?.value ?? ''
     const url = value === '' ? exampleUrl : value
@@ -30,18 +30,31 @@ export default function Welcome({ setUrl }: Props): ReactNode {
       </p>
       <p>
         This demo uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance table viewing.
+        And <a href="https://github.com/hyparam/hyparquet">hyparquet</a> for reading parquet files.
       </p>
       <form onSubmit={onSubmit}>
-        <label htmlFor="url">Drag and drop a parquet file (or url) to see your parquet data. 👀</label>
+        <label htmlFor="url">Drag and drop a parquet file (or url) to query your parquet data. 👀</label>
         <div className="inputGroup">
           <input id="url" type="url" ref={urlRef} required={false} placeholder={exampleUrl} />
           <button>Load</button>
         </div>
       </form>
-      <p>
-        Example files:
-      </p>
+      <h2>Example files:</h2>
       <ul className="quick-links">
+        <li>
+          <a
+            className="aws"
+            href="?key=https://s3.hyperparam.app/squirreling/wine-reviews.parquet">
+            wine-reviews.parquet
+          </a>
+        </li>
+        <li>
+          <a
+            className="aws"
+            href="?key=https://s3.hyperparam.app/squirreling/VendorPayments2527.parquet">
+            VendorPayments2527.parquet
+          </a>
+        </li>
         <li>
           <a
             className="aws"
