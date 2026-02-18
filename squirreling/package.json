@@ -1,5 +1,5 @@
 {
-  "name": "icebird-demo",
+  "name": "hyparquet-demo",
   "private": true,
   "version": "0.1.0",
   "license": "MIT",
@@ -9,23 +9,25 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "preview": "vite preview",
     "test": "vitest run --dir test",
     "typecheck": "tsc"
   },
   "dependencies": {
     "hightable": "0.26.3",
+    "hyparquet": "1.25.0",
+    "hyparquet-compressors": "1.1.1",
     "hyperparam": "0.4.6",
-    "icebird": "0.3.1",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "squirreling": "0.9.1"
   },
   "devDependencies": {
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.4",
     "@vitest/coverage-v8": "4.0.18",
-    "baseline-browser-mapping": "2.9.19",
     "eslint": "9.39.2",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",

@@ -2,6 +2,7 @@
 
 [![workflow status](https://github.com/hyparam/demos/actions/workflows/ci_hightable_demo.yml/badge.svg)](https://github.com/hyparam/demos/actions)
 [![workflow status](https://github.com/hyparam/demos/actions/workflows/ci_hyparquet_demo.yml/badge.svg)](https://github.com/hyparam/demos/actions)
+[![workflow status](https://github.com/hyparam/demos/actions/workflows/ci_squirreling_demo.yml/badge.svg)](https://github.com/hyparam/demos/actions)
 [![mit license](https://img.shields.io/badge/License-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 
 ## HighTable Demo :classical_building:
@@ -28,6 +29,19 @@ Example project showing how to use hyparquet.
 Provides a drag-and-drop interface for loading parquet files into the browser.
 
 Also includes a parquet metadata view, and parquet file layout view.
+
+Uses vite for running client-side react.
+
+## Squirreling Demo :chipmunk:
+
+Squirreling is a streaming async SQL engine in pure JavaScript.
+
+Demo: https://hyparam.github.io/demos/squirreling/
+
+Squirreling: https://github.com/hyparam/squirreling
+
+Example project showing how to use squirreling.
+Provides a simple SQL editor interface for running queries against a parquet file.
 
 Uses vite for running client-side react.
 

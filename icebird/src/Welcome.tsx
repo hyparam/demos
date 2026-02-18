@@ -1,4 +1,4 @@
-import { FormEvent, ReactNode, useCallback, useRef } from 'react'
+import { ReactNode, SubmitEvent, useCallback, useRef } from 'react'
 
 const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/pyice/default.db/events'
 
@@ -9,7 +9,7 @@ interface Props {
 export default function Welcome({ setTableUrl }: Props): ReactNode {
   const urlRef = useRef<HTMLInputElement>(null)
 
-  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = useCallback((e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     const url = urlRef.current?.value ?? ''
     const tableUrl = url === '' ? exampleUrl : url

@@ -1,4 +1,4 @@
-import { type FormEvent, ReactNode, useCallback, useRef } from 'react'
+import { ReactNode, SubmitEvent, useCallback, useRef } from 'react'
 import audioSvg from './assets/audio.svg'
 import hyparquetMp3 from './assets/hyparquet.mp3'
 
@@ -18,7 +18,7 @@ export default function Welcome({ setUrl }: Props): ReactNode {
     })
   }
 
-  const onSubmit = useCallback((e: FormEvent<HTMLFormElement>) => {
+  const onSubmit = useCallback((e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault()
     const value = urlRef.current?.value ?? ''
     const url = value === '' ? exampleUrl : value
