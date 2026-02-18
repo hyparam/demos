@@ -1,4 +1,4 @@
-import { AsyncBuffer, Compressors, FileMetaData, parquetMetadataAsync, parquetReadObjects } from 'hyparquet'
+import { AsyncBuffer, Compressors, FileMetaData, parquetReadObjects, parquetSchema } from 'hyparquet'
 import { whereToParquetFilter } from './parquetFilter.js'
 import { AsyncDataSource, AsyncRow, SqlPrimitive } from 'squirreling'
 import { AsyncCells } from 'squirreling/src/types.js'
@@ -6,33 +6,41 @@ import { AsyncCells } from 'squirreling/src/types.js'
 /**
  * Creates a parquet data source for use with squirreling SQL engine.
  */
-export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData | undefined, compressors: Compressors): AsyncDataSource {
+export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, compressors: Compressors): AsyncDataSource {
   return {
-    scan(hints) {
+    scan({ columns, where, limit, offset, signal }) {
       // Convert WHERE AST to hyparquet filter format
-      const whereFilter = hints.where && whereToParquetFilter(hints.where)
+      const whereFilter = where && whereToParquetFilter(where)
       /** @type {ParquetQueryFilter | undefined} */
-      const filter = hints.where ? whereFilter : undefined
+      const filter = where ? whereFilter : undefined
       const appliedWhere = Boolean(filter && whereFilter)
-      const appliedLimitOffset = !hints.where || appliedWhere
+      const appliedLimitOffset = !where || appliedWhere
+
+      // Ensure columns exist in metadata if provided
+      if (columns) {
+        const schema = parquetSchema(metadata)
+        for (const col of columns) {
+          if (!schema.children.some(child => child.element.name === col)) {
+            throw new Error(`Column "${col}" not found in parquet schema`)
+          }
+        }
+      }
 
       return {
         rows: (async function* () {
-          metadata ??= await parquetMetadataAsync(file)
-
           // Emit rows by row group
           let groupStart = 0
-          let remainingLimit = hints.limit ?? Infinity
+          let remainingLimit = limit ?? Infinity
           for (const rowGroup of metadata.row_groups) {
-            if (hints.signal?.aborted) break
+            if (signal?.aborted) break
             const rowCount = Number(rowGroup.num_rows)
 
             // Skip row groups by offset if where is fully applied
             let safeOffset = 0
             let safeLimit = rowCount
             if (appliedLimitOffset) {
-              if (hints.offset !== undefined && groupStart < hints.offset) {
-                safeOffset = Math.min(rowCount, hints.offset - groupStart)
+              if (offset !== undefined && groupStart < offset) {
+                safeOffset = Math.min(rowCount, offset - groupStart)
               }
               safeLimit = Math.min(rowCount - safeOffset, remainingLimit)
               if (safeLimit <= 0 && safeOffset < rowCount) break
@@ -48,12 +56,13 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData | un
             }
 
             // Read objects from this row group
+            // TODO: move to worker
             const data = await parquetReadObjects({
               file,
               metadata,
               rowStart: groupStart + safeOffset,
               rowEnd: groupStart + safeOffset + safeLimit,
-              columns: hints.columns,
+              columns,
               filter,
               filterStrict: false,
               compressors,

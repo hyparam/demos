@@ -1,7 +1,7 @@
-import type { AsyncRow } from 'squirreling'
+import { AsyncRow, derivedAlias } from 'squirreling'
 import type { SelectColumn } from 'squirreling/src/types.js'
 import type { ColumnDescriptor, DataFrame, DataFrameEvents } from 'hightable/dataframe'
-import { createEventTarget, stringify } from 'hightable/dataframe'
+import { createEventTarget } from 'hightable/dataframe'
 
 interface SquirrelingDataFrameOptions {
   rowGen: AsyncGenerator<AsyncRow>
@@ -20,18 +20,8 @@ function resolveColumnNames(columns: SelectColumn[], sourceColumns: string[]): s
       // SELECT * - use all source columns
       names.push(...sourceColumns)
     } else {
-      // Derived column - use alias or expression name
-      if (col.alias) {
-        names.push(col.alias)
-      } else if (col.expr.type === 'identifier') {
-        names.push(col.expr.name)
-      } else if (col.expr.type === 'function') {
-        names.push(col.expr.name)
-      } else if (col.expr.type === 'literal') {
-        names.push(stringify(col.expr.value) ?? '?')
-      } else {
-        names.push('?')
-      }
+      // Derived column - use derived alias
+      names.push(col.alias ?? derivedAlias(col.expr))
     }
   }
   return names

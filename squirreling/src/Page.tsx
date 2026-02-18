@@ -3,7 +3,7 @@ import { FileMetaData, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet
 import { AsyncBufferFrom, asyncBufferFrom } from 'hyperparam'
 import { compressors } from 'hyparquet-compressors'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
-import { AsyncDataSource, executeSql, parseSql } from 'squirreling'
+import { AsyncDataSource, executePlan, parseSql, planSql } from 'squirreling'
 import { parquetDataSource } from './parquetDataSource.js'
 import { type ByteRange, countingBuffer } from './countingBuffer.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
@@ -68,10 +68,13 @@ export default function Page({ metadata, df, name, from, byteLength, setError }:
     try {
       // parse the query and execute it
       const parsedQuery = parseSql({ query })
-      const rowGen = executeSql({
-        tables: { table },
-        query: parsedQuery,
-        signal: abortController.signal,
+      const plan = planSql({ query: parsedQuery })
+      const rowGen = executePlan({
+        plan,
+        context: {
+          tables: { table },
+          signal: abortController.signal,
+        },
       })
       const sourceColumns = df.columnDescriptors.map(c => c.name)
       const resultsDf = squirrelingDataFrame({
