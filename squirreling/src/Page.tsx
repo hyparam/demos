@@ -27,7 +27,7 @@ export interface PageProps {
 }
 
 /**
- * Squireeling demo page
+ * Squirreling demo page
  * Enter SQL queries to filter the data.
  *
  * @param {Object} props

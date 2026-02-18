@@ -1,0 +1,15 @@
+name: squirreling-demo
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    paths:
+      - 'squirreling/**'
+      - '.github/workflows/_common_jobs.yml'
+      - '.github/workflows/ci_squirreling_demo.yml'
+jobs:
+  ci:
+    uses: ./.github/workflows/_common_jobs.yml
+    with:
+      workspace: squirreling

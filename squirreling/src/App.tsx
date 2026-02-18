@@ -2,7 +2,6 @@ import { ReactNode } from 'react'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
 
-import { sortableDataFrame } from 'hightable'
 import { byteLengthFromUrl, parquetMetadataAsync } from 'hyparquet'
 import { AsyncBufferFrom, asyncBufferFrom, parquetDataFrame } from 'hyperparam'
 import { useCallback, useEffect, useState } from 'react'
@@ -23,7 +22,7 @@ export default function App(): ReactNode {
   const setAsyncBuffer = useCallback(async function setAsyncBuffer(name: string, from: AsyncBufferFrom) {
     const asyncBuffer = await asyncBufferFrom(from)
     const metadata = await parquetMetadataAsync(asyncBuffer)
-    const df = sortableDataFrame(parquetDataFrame(from, metadata))
+    const df = parquetDataFrame(from, metadata)
     setPageProps({ metadata, df, name, from, byteLength: from.byteLength, setError: setUnknownError })
   }, [setUnknownError])
 

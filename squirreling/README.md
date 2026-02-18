@@ -1,6 +1,6 @@
-# Hyparquet demo
+# Squirreling demo
 
-This is an example project showing how to use [hyparquet](https://github.com/hyparam/hyparquet).
+This is an example project showing how to use [squirreling](https://github.com/hyparam/squirreling).
 
 ## Build
 

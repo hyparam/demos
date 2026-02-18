@@ -45,10 +45,6 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
               safeLimit = Math.min(rowCount - safeOffset, remainingLimit)
               if (safeLimit <= 0 && safeOffset < rowCount) break
             }
-            for (let i = 0; i < safeOffset; i++) {
-              // yield empty rows
-              yield asyncRow({})
-            }
             if (safeOffset === rowCount) {
               // no rows from this group, continue to next
               groupStart += rowCount
