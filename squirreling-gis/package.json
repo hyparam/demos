@@ -1,0 +1,42 @@
+{
+  "name": "squirreling-gis-demo",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "coverage": "vitest run --coverage --coverage.include=src",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "preview": "vite preview",
+    "test": "vitest run --dir test",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "hyparquet": "1.25.6",
+    "hyparquet-compressors": "1.1.1",
+    "hyperparam": "0.4.9",
+    "leaflet": "1.9.4",
+    "react": "19.2.5",
+    "react-dom": "19.2.5",
+    "squirreling": "0.12.1"
+  },
+  "devDependencies": {
+    "@types/leaflet": "1.9.21",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "@vitest/coverage-v8": "4.1.4",
+    "eslint": "9.39.2",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.5.2",
+    "globals": "17.4.0",
+    "typescript": "6.0.2",
+    "typescript-eslint": "8.58.1",
+    "vite": "8.0.8",
+    "vitest": "4.1.4"
+  }
+}
