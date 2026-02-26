@@ -48,9 +48,39 @@ export default function ParquetGrid({ metadata }: GridProps): ReactNode {
       </div>
 
       {/* Data rows */}
-      {metadata.row_groups.map((rowGroup, i) =>
-        <div key={i} className="grid-row-wrapper">
-          <div className="grid-label">{i}</div>
+      {metadata.row_groups.map((rowGroup, i) => {
+        const rowGroupSize = rowGroup.columns.reduce(
+          (sum, col) => sum + Number(col.meta_data?.total_compressed_size ?? 0n), 0,
+        )
+        const rowGroupUncompressed = rowGroup.columns.reduce(
+          (sum, col) => sum + Number(col.meta_data?.total_uncompressed_size ?? 0n), 0,
+        )
+        const totalPages = rowGroup.columns.reduce(
+          (sum, col) => sum + (col.meta_data?.encoding_stats?.reduce((s, e) => s + e.count, 0) ?? 0), 0,
+        )
+        const dataPages = rowGroup.columns.reduce(
+          (sum, col) => sum + (col.meta_data?.encoding_stats
+            ?.filter(e => e.page_type === 'DATA_PAGE' || e.page_type === 'DATA_PAGE_V2')
+            .reduce((s, e) => s + e.count, 0) ?? 0), 0,
+        )
+        const dictPages = rowGroup.columns.reduce(
+          (sum, col) => sum + (col.meta_data?.encoding_stats
+            ?.filter(e => e.page_type === 'DICTIONARY_PAGE')
+            .reduce((s, e) => s + e.count, 0) ?? 0), 0,
+        )
+        let rgTitle = `Row Group: ${i}\n${Number(rowGroup.num_rows).toLocaleString()} rows`
+        rgTitle += `\n${rowGroupSize.toLocaleString()} bytes compressed`
+        rgTitle += `\n${rowGroupUncompressed.toLocaleString()} bytes uncompressed`
+        if (totalPages > 0) {
+          rgTitle += `\n${totalPages.toLocaleString()} pages (${dataPages} data`
+          if (dictPages > 0) rgTitle += `, ${dictPages} dictionary`
+          rgTitle += ')'
+        }
+        return <div key={i} className="grid-row-wrapper">
+          <div
+            className="grid-label"
+            title={rgTitle}
+          >{i}</div>
           <div className="grid-row" style={{ gridTemplateColumns }}>
             {rowGroup.columns.map((column, j) => {
               const numRows = Number(rowGroup.num_rows)
@@ -78,8 +108,8 @@ export default function ParquetGrid({ metadata }: GridProps): ReactNode {
               )
             })}
           </div>
-        </div>,
-      )}
+        </div>
+      })}
     </div>
   )
 }
