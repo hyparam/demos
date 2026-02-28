@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - run: npm i
-      - run: npm run coverage
+      - run: npm test
   
   buildcheck:
     runs-on: ubuntu-latest

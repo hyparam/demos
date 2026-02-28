@@ -9,6 +9,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       {
         [
           ['Basic', '/'],
+          ['Delayed', '/delayed'],
           ['Selection', '/selection'],
           ['Controlled', '/controlled'],
           ['Mirror', '/mirror'],

@@ -5,7 +5,6 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "coverage": "vitest run --coverage --coverage.include=src",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
@@ -15,7 +14,7 @@
   },
   "dependencies": {
     "hightable": "0.26.3",
-    "hyparquet": "1.25.0",
+    "hyparquet": "1.25.1",
     "hyparquet-compressors": "1.1.1",
     "hyperparam": "0.4.6",
     "react": "19.2.4",
@@ -25,15 +24,13 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "5.1.4",
-    "@vitest/coverage-v8": "4.0.18",
-    "baseline-browser-mapping": "2.9.19",
     "eslint": "9.39.2",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.0.1",
-    "eslint-plugin-react-refresh": "0.5.0",
+    "eslint-plugin-react-refresh": "0.5.2",
     "globals": "17.3.0",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.56.0",
+    "typescript-eslint": "8.56.1",
     "vite": "7.3.1",
     "vitest": "4.0.18"
   }
