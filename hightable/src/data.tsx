@@ -41,10 +41,58 @@ function generateValue({ row, column }: { row: number, column: string }): string
     return JSON.stringify({ row, column })
   default:
     throw new Error(`Unknown column: ${column}`)
-  }}
+  }
+}
 
-function generateData({ numRows }: { numRows?: number } = {}): DataFrame {
-  numRows ??= 10_000
+/**
+ * Generates a DataFrame that resolves cells and row numbers synchronously.
+ */
+function generateData({ numRows }: { numRows: number }): DataFrame {
+  const cellCache = new Map<string, ResolvedValue[]>(header.map(column => [column, []]))
+  const rowNumberCache: ResolvedValue<number>[] = []
+  const eventTarget = createEventTarget<DataFrameEvents>()
+
+  const mockData: DataFrame = {
+    columnDescriptors: header.map(column => ({ name: column })),
+    numRows,
+    getCell: ({ row, column }) => {
+      return cellCache.get(column)?.[row]
+    },
+    getRowNumber: ({ row }) => {
+      return rowNumberCache[row]
+    },
+    fetch: ({ rowEnd, rowStart, columns, signal }) => {
+      checkSignal(signal)
+      for (let row = rowStart; row < rowEnd; row++) {
+        if (!rowNumberCache[row]) {
+          rowNumberCache[row] = { value: row }
+        }
+        for (const column of columns ?? []) {
+          if (!header.includes(column)) {
+            throw new Error(`Unknown column: ${column}`)
+          }
+          if (!cellCache.get(column)?.[row]) {
+            const columnCache = cellCache.get(column)
+            if (!columnCache) {
+              throw new Error(`Column cache not found for: ${column}`)
+            }
+            columnCache[row] = { value: generateValue({ row, column }) }
+          }
+        }
+      }
+      eventTarget.dispatchEvent(new CustomEvent('resolve'))
+      return Promise.resolve()
+    },
+    eventTarget,
+  }
+
+  return sortableDataFrame(mockData)
+}
+
+/**
+ * Generates a DataFrame with delayed fetching of cells and row numbers.
+ */
+function generateDelayed({ numRows }: { numRows: number }): DataFrame {
   const mockData: DataFrame = {
     columnDescriptors: header.map(column => ({ name: column })),
     numRows,
@@ -100,3 +148,4 @@ function generateData({ numRows }: { numRows?: number } = {}): DataFrame {
 
 export const data = generateData({ numRows: 10000 })
 export const largeData = generateData({ numRows: 100_000_000 })
+export const delayed = generateDelayed({ numRows: 10000 })
