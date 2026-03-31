@@ -1,5 +1,5 @@
 import { parseSql, tokenizeSql } from 'squirreling'
-import type { ExprNode, SelectStatement, Token } from 'squirreling'
+import type { ExprNode, Statement, Token } from 'squirreling'
 
 export interface HighlightRange {
   start: number
@@ -67,16 +67,29 @@ export function highlightSql(sql: string): HighlightRange[] {
 /**
  * Recursively collect the start positions of all function names in the AST.
  */
-function collectFunctionPositions(stmt: SelectStatement, positions: Set<number>): void {
+function collectFunctionPositions(stmt: Statement, positions: Set<number>): void {
+  if (stmt.type === 'with') {
+    for (const cte of stmt.ctes) {
+      collectFunctionPositions(cte.query, positions)
+    }
+    collectFunctionPositions(stmt.query, positions)
+    return
+  }
+  if (stmt.type === 'compound') {
+    collectFunctionPositions(stmt.left, positions)
+    collectFunctionPositions(stmt.right, positions)
+    return
+  }
+
   // Process columns
   for (const col of stmt.columns) {
-    if (col.kind === 'derived') {
+    if (col.type === 'derived') {
       collectFromExpr(col.expr, positions)
     }
   }
 
   // Process FROM subquery
-  if (stmt.from.kind === 'subquery') {
+  if (stmt.from.type === 'subquery') {
     collectFunctionPositions(stmt.from.query, positions)
   }
 

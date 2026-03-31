@@ -1,26 +1,45 @@
-import { AsyncRow, derivedAlias } from 'squirreling'
-import type { SelectColumn } from 'squirreling/src/types.js'
+import { derivedAlias } from 'squirreling'
+import type { AsyncRow, Statement } from 'squirreling'
 import type { ColumnDescriptor, DataFrame, DataFrameEvents } from 'hightable/dataframe'
 import { createEventTarget } from 'hightable/dataframe'
 
 interface SquirrelingDataFrameOptions {
   rowGen: AsyncGenerator<AsyncRow>
-  columns?: SelectColumn[]
-  sourceColumns?: string[]
+  query: Statement
+  sourceColumns: string[]
 }
 
 /**
  * Resolve select columns to column names deterministically.
- * Handles both * (star) columns and derived columns with aliases.
+ * Handles *, derived columns, CTEs, and set operations.
  */
-function resolveColumnNames(columns: SelectColumn[], sourceColumns: string[]): string[] {
+function resolveColumnNames(
+  query: Statement,
+  sourceColumns: string[],
+  cteColumns = new Map<string, string[]>(),
+): string[] {
+  if (query.type === 'with') {
+    const scopedCteColumns = new Map(cteColumns)
+    for (const cte of query.ctes) {
+      scopedCteColumns.set(
+        cte.name.toLowerCase(),
+        resolveColumnNames(cte.query, sourceColumns, scopedCteColumns),
+      )
+    }
+    return resolveColumnNames(query.query, sourceColumns, scopedCteColumns)
+  } else if (query.type === 'compound') {
+    return resolveColumnNames(query.left, sourceColumns, cteColumns)
+  }
+
   const names: string[] = []
-  for (const col of columns) {
-    if (col.kind === 'star') {
-      // SELECT * - use all source columns
-      names.push(...sourceColumns)
+  const starColumns = query.from.type === 'table'
+    ? cteColumns.get(query.from.table.toLowerCase()) ?? sourceColumns
+    : sourceColumns
+
+  for (const col of query.columns) {
+    if (col.type === 'star') {
+      names.push(...starColumns)
     } else {
-      // Derived column - use derived alias
       names.push(col.alias ?? derivedAlias(col.expr))
     }
   }
@@ -33,15 +52,13 @@ function resolveColumnNames(columns: SelectColumn[], sourceColumns: string[]): s
  */
 export function squirrelingDataFrame({
   rowGen,
-  columns,
+  query,
   sourceColumns,
 }: SquirrelingDataFrameOptions): DataFrame {
   const asyncRows: AsyncRow[] = []
   const resolvedCells = new Map<string, unknown>()
-  // Compute column descriptors deterministically if columns are provided
-  let columnDescriptors: ColumnDescriptor[] = columns && sourceColumns
-    ? resolveColumnNames(columns, sourceColumns).map(name => ({ name }))
-    : []
+  let columnDescriptors: ColumnDescriptor[] = resolveColumnNames(query, sourceColumns)
+    .map(name => ({ name }))
   let generatorDone = false
   const eventTarget = createEventTarget<DataFrameEvents>()
 

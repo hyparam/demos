@@ -1,13 +1,18 @@
 import { AsyncBuffer, Compressors, FileMetaData, parquetReadObjects, parquetSchema } from 'hyparquet'
+import { parquetReadAsync } from 'hyparquet/src/read.js'
+import { assembleAsync } from 'hyparquet/src/rowgroup.js'
 import { whereToParquetFilter } from './parquetFilter.js'
-import { AsyncDataSource, AsyncRow, SqlPrimitive } from 'squirreling'
-import { AsyncCells } from 'squirreling/src/types.js'
+import { asyncRow } from 'squirreling'
+import type { AsyncDataSource, SqlPrimitive } from 'squirreling'
 
 /**
  * Creates a parquet data source for use with squirreling SQL engine.
  */
 export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, compressors: Compressors): AsyncDataSource {
+  const schema = parquetSchema(metadata)
   return {
+    numRows: Number(metadata.num_rows),
+    columns: schema.children.map(c => c.element.name),
     scan({ columns, where, limit, offset, signal }) {
       // Convert WHERE AST to hyparquet filter format
       const whereFilter = where && whereToParquetFilter(where)
@@ -18,7 +23,6 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
 
       // Ensure columns exist in metadata if provided
       if (columns) {
-        const schema = parquetSchema(metadata)
         for (const col of columns) {
           if (!schema.children.some(child => child.element.name === col)) {
             throw new Error(`Column "${col}" not found in parquet schema`)
@@ -52,7 +56,6 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
             }
 
             // Read objects from this row group
-            // TODO: move to worker
             const data = await parquetReadObjects({
               file,
               metadata,
@@ -67,7 +70,7 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
 
             // Yield each row
             for (const row of data) {
-              yield asyncRow(row)
+              yield asyncRow(row as Record<string, SqlPrimitive>, Object.keys(row))
             }
 
             remainingLimit -= data.length
@@ -78,16 +81,39 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
         appliedLimitOffset,
       }
     },
-  }
-}
 
-/**
- * Creates an async row accessor that wraps a plain JavaScript object
- */
-function asyncRow(obj: Record<string, SqlPrimitive>): AsyncRow {
-  const cells: AsyncCells = {}
-  for (const [key, value] of Object.entries(obj)) {
-    cells[key] = () => Promise.resolve(value)
+    async *scanColumn({ column, limit, offset, signal }) {
+      const rowStart = offset ?? 0
+      const rowEnd = limit !== undefined ? rowStart + limit : undefined
+      const asyncGroups = parquetReadAsync({
+        file,
+        metadata,
+        rowStart,
+        rowEnd,
+        columns: [column],
+        compressors,
+      })
+      // assemble struct columns
+      const schemaTree = parquetSchema(metadata)
+      const assembled = asyncGroups.map(arg => assembleAsync(arg, schemaTree))
+
+      for (const rg of assembled) {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+        const { skipped, data } = await rg.asyncColumns[0].data
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+        let dataStart = rg.groupStart + skipped
+        for (const page of data) {
+          const pageRows = page.length
+          const selectStart = Math.max(rowStart - dataStart, 0)
+          const selectEnd = Math.min((rowEnd ?? Infinity) - dataStart, pageRows)
+          if (selectEnd > selectStart) {
+            yield selectStart > 0 || selectEnd < pageRows
+              ? page.slice(selectStart, selectEnd)
+              : page
+          }
+          dataStart += pageRows
+        }
+      }
+    },
   }
-  return { columns: Object.keys(obj), cells }
 }

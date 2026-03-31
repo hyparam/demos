@@ -34,13 +34,13 @@ export interface PageProps {
  * @returns {ReactNode}
  */
 export default function Page({ metadata, df, name, from, byteLength, setError }: PageProps): ReactNode {
-  const [query, setQuery] = useState<string>('SELECT * FROM table LIMIT 500')
-  const [queryDf, setQueryDf] = useState<DataFrame>(df)
+  const [query, setQuery] = useState('SELECT * FROM table LIMIT 500')
+  const [queryDf, setQueryDf] = useState(df)
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
   const [table, setTable] = useState<AsyncDataSource | undefined>()
   const [sqlError, setSqlError] = useState<SqlErrorInfo | undefined>()
-  const [networkBytes, setNetworkBytes] = useState<number>(0)
+  const [networkBytes, setNetworkBytes] = useState(0)
   const [downloadedRanges, setDownloadedRanges] = useState<ByteRange[]>([])
 
   // Compute syntax highlighting
@@ -79,7 +79,7 @@ export default function Page({ metadata, df, name, from, byteLength, setError }:
       const sourceColumns = df.columnDescriptors.map(c => c.name)
       const resultsDf = squirrelingDataFrame({
         rowGen,
-        columns: parsedQuery.columns,
+        query: parsedQuery,
         sourceColumns,
       })
       queueMicrotask(() => {
