@@ -7,5 +7,10 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ["hyperparam"],
   },
+  css: {
+    lightningcss: {
+      errorRecovery: true,
+    },
+  },
   base: './',
 })
