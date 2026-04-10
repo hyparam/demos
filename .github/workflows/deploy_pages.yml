@@ -32,6 +32,11 @@ jobs:
         run: |
           npm i
           npm run build
+      - name: Build squirreling-gis demo
+        working-directory: squirreling-gis
+        run: |
+          npm i
+          npm run build
       - name: Move the build outputs to a folder
         run: |
           mkdir -p build_outputs_folder
@@ -41,6 +46,7 @@ jobs:
           echo "<li><a href="./hightable">hightable demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./icebird">icebird demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./squirreling">squirreling demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./squirreling-gis">squirreling-gis demo</a></li>" >> build_outputs_folder/index.html
           echo "</ul>" >> build_outputs_folder/index.html
           echo "<h1 id="hyparam">Hyperparam</h1>" > build_outputs_folder/index.html
           echo "<ul>" >> build_outputs_folder/index.html
@@ -48,11 +54,13 @@ jobs:
           echo "<li><a href="./hightable">hightable demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./icebird">icebird demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./squirreling">squirreling demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./squirreling-gis">squirreling-gis demo</a></li>" >> build_outputs_folder/index.html
           echo "</ul>" >> build_outputs_folder/index.html
           mv hyparquet/dist build_outputs_folder/hyparquet
           mv hightable/dist build_outputs_folder/hightable
           mv icebird/dist build_outputs_folder/icebird
           mv squirreling/dist build_outputs_folder/squirreling
+          mv squirreling-gis/dist build_outputs_folder/squirreling-gis
       - name: Upload static files as artifact
         id: deployment
         uses: actions/upload-pages-artifact@v3

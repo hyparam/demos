@@ -1,0 +1,15 @@
+name: squirreling-gis-demo
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    paths:
+      - 'squirreling-gis/**'
+      - '.github/workflows/_common_jobs.yml'
+      - '.github/workflows/ci_squirreling_gis_demo.yml'
+jobs:
+  ci:
+    uses: ./.github/workflows/_common_jobs.yml
+    with:
+      workspace: squirreling-gis
