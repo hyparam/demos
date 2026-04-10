@@ -13,7 +13,7 @@ export default function App(): ReactNode {
   const url = params.get('key') ?? undefined
 
   const [error, setError] = useState<Error>()
-  const [pageProps, setPageProps] = useState<PageProps>()
+  const [pageProps, setPageProps] = useState<Omit<PageProps, 'loadUrl'>>()
 
   const setUnknownError = useCallback((e: unknown) => {
     setError(e === undefined || e instanceof Error ? e : new Error('Unknown error' + JSON.stringify(e)))
@@ -53,7 +53,7 @@ export default function App(): ReactNode {
       onError={(e) => { setError(e) }}
       onFileDrop={onFileDrop}
       onUrlDrop={onUrlDrop}>
-      {pageProps ? <Page {...pageProps} /> : <Welcome setUrl={onUrlDrop} />}
+      {pageProps ? <Page {...pageProps} loadUrl={onUrlDrop} /> : <Welcome setUrl={onUrlDrop} />}
     </Dropzone>
   </Layout>
 }

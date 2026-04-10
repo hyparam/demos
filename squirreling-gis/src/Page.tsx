@@ -1,6 +1,6 @@
 import { FileMetaData, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
 import type { Geometry } from 'hyparquet/src/types.js'
-import { AsyncBufferFrom, asyncBufferFrom } from 'hyperparam'
+import { AsyncBufferFrom, asyncBufferFrom, Json } from 'hyperparam';
 import { compressors } from 'hyparquet-compressors'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { AsyncDataSource, AsyncRow, cachedDataSource, executePlan, parseSql, planSql } from 'squirreling'
@@ -9,6 +9,8 @@ import { countingBuffer } from './countingBuffer.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
 import { highlightSql } from './sqlHighlight.js'
 import LeafletMap, { MapFeature } from './LeafletMap.js'
+import { useWebMCP } from '@mcp-b/react-webmcp'
+import type { JsonSchemaForInference } from '@mcp-b/webmcp-types'
 
 const exampleQueries = [
   {
@@ -41,13 +43,14 @@ export interface PageProps {
   from: AsyncBufferFrom
   byteLength?: number
   setError: (e: unknown) => void
+  loadUrl: (url: string) => void
 }
 
 /**
  * Squirreling GIS demo page.
  * Enter SQL queries to filter geospatial data and view results on a map.
  */
-export default function Page({ metadata, name, from, byteLength, setError }: PageProps): ReactNode {
+export default function Page({ metadata, name, from, byteLength, setError, loadUrl }: PageProps): ReactNode {
   const [query, setQuery] = useState<string>(exampleQueries[0].query)
   const [features, setFeatures] = useState<MapFeature[]>([])
   const [featureCount, setFeatureCount] = useState(0)
@@ -67,6 +70,61 @@ export default function Page({ metadata, name, from, byteLength, setError }: Pag
     setError(undefined)
     setSqlError(undefined)
   }, [setError])
+
+  useWebMCP({
+    name: 'run_sql',
+    description: 'Run a SQL query against the loaded GeoParquet file. Updates the map with results. Table is named "table". Supports ST_WITHIN, ST_MAKEENVELOPE, ST_GEOMFROMTEXT. Always use LIMIT. Example: SELECT * FROM table WHERE ST_WITHIN(geometry, ST_MAKEENVELOPE(-122.5, 37.7, -122.3, 37.8)) LIMIT 1000',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'SQL query to execute' },
+      },
+      required: ['query'],
+    } as const satisfies JsonSchemaForInference,
+    handler: async ({ query: sql }) => {
+      if (!table) throw new Error('No parquet file loaded yet')
+      handleQueryChange(sql)
+      return { status: 'query_submitted', query: sql }
+    },
+  }, [table, handleQueryChange])
+
+  useWebMCP({
+    name: 'get_map_state',
+    description: 'Get the current map state: feature count, active query, columns, and sample features.',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    } as const satisfies JsonSchemaForInference,
+    annotations: { readOnlyHint: true },
+    handler: async () => {
+      const columns = features.length > 0 ? Object.keys(features[0].properties) : []
+      return {
+        featureCount: features.length,
+        currentQuery: query,
+        columns,
+        sampleFeatures: features.slice(0, 5).map(f => ({
+          geometryType: f.geometry.type,
+          properties: f.properties,
+        })),
+      }
+    },
+  }, [features, query])
+
+  useWebMCP({
+    name: 'load_parquet_url',
+    description: 'Load a different GeoParquet file from a URL (must support HTTP Range requests).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to a parquet file' },
+      },
+      required: ['url'],
+    } as const satisfies JsonSchemaForInference,
+    handler: async ({ url }) => {
+      loadUrl(url)
+      return { status: 'loading', url }
+    },
+  }, [loadUrl])
 
   // Execute query and collect features
   useEffect(() => {

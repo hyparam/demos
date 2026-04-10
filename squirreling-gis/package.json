@@ -15,13 +15,16 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@mcp-b/global": "^2.2.0",
+    "@mcp-b/webmcp-types": "^2.2.0",
     "hyparquet": "1.25.6",
     "hyparquet-compressors": "1.1.1",
     "hyperparam": "0.4.9",
     "leaflet": "1.9.4",
     "react": "19.2.5",
     "react-dom": "19.2.5",
-    "squirreling": "0.12.1"
+    "squirreling": "0.12.1",
+    "@mcp-b/react-webmcp": "^2.2.0"
   },
   "devDependencies": {
     "@types/leaflet": "1.9.21",
