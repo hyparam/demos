@@ -23,8 +23,11 @@ export interface PageProps {
   name: string
   from: AsyncBufferFrom
   byteLength?: number
+  initialQuery?: string
   setError: (e: unknown) => void
 }
+
+const DEFAULT_QUERY = 'SELECT * FROM table LIMIT 500'
 
 /**
  * Squirreling demo page
@@ -33,8 +36,8 @@ export interface PageProps {
  * @param {Object} props
  * @returns {ReactNode}
  */
-export default function Page({ metadata, df, name, from, byteLength, setError }: PageProps): ReactNode {
-  const [query, setQuery] = useState('SELECT * FROM table LIMIT 500')
+export default function Page({ metadata, df, name, from, byteLength, initialQuery, setError }: PageProps): ReactNode {
+  const [query, setQuery] = useState(initialQuery ?? DEFAULT_QUERY)
   const [queryDf, setQueryDf] = useState(df)
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
@@ -55,6 +58,16 @@ export default function Page({ metadata, df, name, from, byteLength, setError }:
     setSqlError(undefined)
     if (newQuery.length <= 2) {
       setQueryDf(df)
+    }
+    // Sync query to URL (only if a key= is present, so we don't add it for local files)
+    const params = new URLSearchParams(location.search)
+    if (params.has('key')) {
+      if (newQuery && newQuery !== DEFAULT_QUERY) {
+        params.set('query', newQuery)
+      } else {
+        params.delete('query')
+      }
+      history.replaceState({}, '', `${location.pathname}?${params}`)
     }
   }, [setError, df])
 

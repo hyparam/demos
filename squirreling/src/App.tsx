@@ -11,6 +11,7 @@ import Layout from './Layout.js'
 export default function App(): ReactNode {
   const params = new URLSearchParams(location.search)
   const url = params.get('key') ?? undefined
+  const initialQuery = params.get('query') ?? undefined
 
   const [error, setError] = useState<Error>()
   const [pageProps, setPageProps] = useState<PageProps>()
@@ -23,8 +24,8 @@ export default function App(): ReactNode {
     const asyncBuffer = await asyncBufferFrom(from)
     const metadata = await parquetMetadataAsync(asyncBuffer)
     const df = parquetDataFrame(from, metadata)
-    setPageProps({ metadata, df, name, from, byteLength: from.byteLength, setError: setUnknownError })
-  }, [setUnknownError])
+    setPageProps({ metadata, df, name, from, byteLength: from.byteLength, initialQuery, setError: setUnknownError })
+  }, [setUnknownError, initialQuery])
 
   const onUrlDrop = useCallback(
     (url: string) => {
