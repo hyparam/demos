@@ -13,19 +13,15 @@ import LeafletMap, { MapFeature } from './LeafletMap.js'
 const exampleQueries = [
   {
     label: 'Seattle',
-    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_MAKEENVELOPE(-122.46, 47.48, -122.22, 47.73)\n)\nLIMIT 1000',
+    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_MAKEENVELOPE(-122.348, 47.598, -122.326, 47.624)\n)\n',
   },
   {
-    label: 'Austin, TX',
-    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_GEOMFROMTEXT(\'POLYGON((-97.8 30.2, -97.8 30.4, -97.6 30.4, -97.6 30.2, -97.8 30.2))\')\n)\nLIMIT 2000',
-  },
-  {
-    label: 'Manhattan, NYC',
-    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_MAKEENVELOPE(-74.02, 40.7, -73.93, 40.8)\n)\nLIMIT 2000',
+    label: 'Bellevue',
+    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_GEOMFROMTEXT(\'POLYGON((-122.22 47.58, -122.18 47.58, -122.18 47.65, -122.22 47.65, -122.22 47.58))\')\n)',
   },
   {
     label: 'San Francisco',
-    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_MAKEENVELOPE(-122.52, 37.7, -122.35, 37.82)\n)\nLIMIT 2000',
+    query: 'SELECT * FROM table\nWHERE ST_WITHIN(\n  geometry,\n  ST_MAKEENVELOPE(-122.45, 37.74, -122.38, 37.81)\n)\nLIMIT 2000',
   },
 ]
 

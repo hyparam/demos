@@ -18,6 +18,11 @@ function convertExpr(node: ExprNode, negate: boolean): ParquetQueryFilter | unde
   if (node.type === 'unary' && node.op === 'NOT') {
     return convertExpr(node.argument, !negate)
   }
+  if (node.type === 'unary' && (node.op === 'IS NULL' || node.op === 'IS NOT NULL')) {
+    if (node.argument.type !== 'identifier') return
+    const isNull = node.op === 'IS NULL' !== negate
+    return { [node.argument.name]: { [isNull ? '$eq' : '$ne']: null } }
+  }
   if (node.type === 'binary') {
     return convertBinary(node, negate)
   }

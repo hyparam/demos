@@ -61,8 +61,7 @@ export default function LeafletMap({ features }: LeafletMapProps): ReactNode {
       })),
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-    const layer = L.geoJSON(geojson as any, {
+    const layer = L.geoJSON(geojson, {
       style: {
         color: '#4433aa',
         weight: 2,

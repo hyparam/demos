@@ -69,7 +69,7 @@ export default function Page({ metadata, df, name, from, byteLength, setError }:
       // parse the query and execute it
       const parsedQuery = parseSql({ query })
       const plan = planSql({ query: parsedQuery })
-      const rowGen = executePlan({
+      const results = executePlan({
         plan,
         context: {
           tables: { table },
@@ -78,7 +78,7 @@ export default function Page({ metadata, df, name, from, byteLength, setError }:
       })
       const sourceColumns = df.columnDescriptors.map(c => c.name)
       const resultsDf = squirrelingDataFrame({
-        rowGen,
+        rowGen: results.rows(),
         query: parsedQuery,
         sourceColumns,
       })

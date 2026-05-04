@@ -31,12 +31,12 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
       }
 
       return {
-        rows: (async function* () {
+        async *rows() {
           // Emit rows by row group
           let groupStart = 0
           let remainingLimit = limit ?? Infinity
           for (const rowGroup of metadata.row_groups) {
-            if (signal?.aborted) break
+            if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
             const rowCount = Number(rowGroup.num_rows)
 
             // Skip row groups by offset if where is fully applied
@@ -65,18 +65,21 @@ export function parquetDataSource(file: AsyncBuffer, metadata: FileMetaData, com
               filter,
               filterStrict: false,
               compressors,
-              useOffsetIndex: true,
+              useOffsetIndex: safeOffset > 0 || safeLimit < rowCount,
             })
 
             // Yield each row
-            for (const row of data) {
-              yield asyncRow(row as Record<string, SqlPrimitive>, Object.keys(row))
+            if (data.length > 0) {
+              const rowColumns = Object.keys(data[0])
+              for (const row of data) {
+                yield asyncRow(row as Record<string, SqlPrimitive>, rowColumns)
+              }
             }
 
             remainingLimit -= data.length
             groupStart += rowCount
           }
-        })(),
+        },
         appliedWhere,
         appliedLimitOffset,
       }
