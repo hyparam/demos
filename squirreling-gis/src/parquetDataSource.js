@@ -1,4 +1,6 @@
 import { parquetReadObjects, parquetSchema } from 'hyparquet'
+import { parquetReadAsync } from 'hyparquet/src/read.js'
+import { assembleAsync } from 'hyparquet/src/rowgroup.js'
 import { whereToParquetFilter } from './parquetFilter.js'
 import { asyncRow } from 'squirreling/src/backend/dataSource.js'
 import { bbox } from 'squirreling/src/spatial/bbox.js'
@@ -96,6 +98,43 @@ export function parquetDataSource(file, metadata, compressors) {
         },
         appliedWhere,
         appliedLimitOffset,
+      }
+    },
+
+    /**
+     * @param {{ column: string, limit?: number, offset?: number, signal?: AbortSignal }} options
+     */
+    async *scanColumn({ column, limit, offset, signal }) {
+      const rowStart = offset ?? 0
+      const rowEnd = limit !== undefined ? rowStart + limit : undefined
+      const asyncGroups = parquetReadAsync({
+        file,
+        metadata,
+        rowStart,
+        rowEnd,
+        columns: [column],
+        compressors,
+      })
+      // assemble struct columns
+      const schemaTree = parquetSchema(metadata)
+      const assembled = asyncGroups.map(arg => assembleAsync(arg, schemaTree))
+
+      for (const rg of assembled) {
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+        const { skipped, data } = await rg.asyncColumns[0].data
+        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
+        let dataStart = rg.groupStart + skipped
+        for (const page of data) {
+          const pageRows = page.length
+          const selectStart = Math.max(rowStart - dataStart, 0)
+          const selectEnd = Math.min((rowEnd ?? Infinity) - dataStart, pageRows)
+          if (selectEnd > selectStart) {
+            yield selectStart > 0 || selectEnd < pageRows
+              ? page.slice(selectStart, selectEnd)
+              : page
+          }
+          dataStart += pageRows
+        }
       }
     },
   }
