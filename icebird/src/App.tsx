@@ -2,23 +2,16 @@ import { ReactNode } from 'react'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
 
-import type { DataFrame } from 'hightable'
 import { icebergListVersions, icebergMetadata } from 'icebird'
 import type { TableMetadata } from 'icebird/src/types.js'
 import { useCallback, useEffect, useState } from 'react'
 import Layout from './Layout.js'
-import { icebergDataFrame } from './data.js'
-
-const empty: DataFrame = {
-  columnDescriptors: [],
-  numRows: 0,
-  getRowNumber: () => undefined,
-  getCell: () => undefined,
-}
+import { buildIcebergDataSource } from './data.js'
 
 export default function App(): ReactNode {
   const params = new URLSearchParams(location.search)
   const queryUrl = params.get('key') ?? undefined
+  const initialQuery = params.get('query') ?? undefined
 
   const [error, setError] = useState<Error>()
   const [pageProps, setPageProps] = useState<PageProps>()
@@ -27,16 +20,10 @@ export default function App(): ReactNode {
   const [versions, setVersions] = useState<string[] | undefined>()
 
   const setUnknownError = useCallback((e: unknown) => {
-    if (e instanceof Error && e.message === 'No iceberg snapshots found') {
-      console.warn('No iceberg snapshots found for version', version)
-      setPageProps(props => props ? { ...props, df: empty } : undefined)
-    } else {
-      setError(e instanceof Error ? e : new Error(String(e)))
-    }
-  }, [version])
+    setError(e === undefined || e instanceof Error ? e : new Error(String(e)))
+  }, [])
 
   useEffect(() => {
-    // List metadata versions
     if (!tableUrl || versions) return
     icebergListVersions({ tableUrl })
       .then(versions => {
@@ -45,7 +32,7 @@ export default function App(): ReactNode {
         setVersion(versions[versions.length - 1])
       })
       .catch(setUnknownError)
-  }, [tableUrl, versions, setVersions, setUnknownError])
+  }, [tableUrl, versions, setUnknownError])
 
   if (pageProps && version && pageProps.version !== version) {
     setPageProps({ ...pageProps, version })
@@ -53,17 +40,32 @@ export default function App(): ReactNode {
 
   useEffect(() => {
     if (!tableUrl || !versions || !version) return
-    // Get the metadata from the iceberg table
+    let cancelled = false
     const metadataFileName = `${version}.metadata.json`
-    icebergMetadata({ tableUrl: tableUrl, metadataFileName }).then((metadata: TableMetadata) => {
-      const df = icebergDataFrame(tableUrl, metadataFileName, metadata)
-      setPageProps({ df, metadata, versions, version, setVersion, setError: setUnknownError })
-    }).catch(setUnknownError)
-  }, [tableUrl, versions, version, setUnknownError])
+    icebergMetadata({ tableUrl, metadataFileName })
+      .then(async (metadata: TableMetadata) => {
+        if (!metadata.snapshots?.length) {
+          throw new Error('No iceberg snapshots found')
+        }
+        const dataSource = await buildIcebergDataSource(tableUrl, metadata)
+        if (cancelled) return
+        setPageProps({
+          tableUrl,
+          metadata,
+          dataSource,
+          versions,
+          version,
+          setVersion,
+          initialQuery,
+          setError: setUnknownError,
+        })
+      })
+      .catch(setUnknownError)
+    return () => { cancelled = true }
+  }, [tableUrl, versions, version, initialQuery, setUnknownError])
 
   const setUrlAndHistory = useCallback(
     (url: string) => {
-      // Add key=url to query string
       const params = new URLSearchParams(location.search)
       params.set('key', url)
       history.pushState({}, '', `${location.pathname}?${params}`)
