@@ -54,7 +54,6 @@ nav.sidebar {
   height: 100vh;
 }
 nav.sidebar > div {
-  background: #eef0f9;
   box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
   position: absolute;

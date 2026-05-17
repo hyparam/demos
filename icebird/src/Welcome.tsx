@@ -1,6 +1,6 @@
 import { ReactNode, SubmitEvent, useCallback, useRef } from 'react'
 
-const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/pyice/default.db/events'
+const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/pyice/default.db'
 
 interface Props {
   setTableUrl: (url: string) => void

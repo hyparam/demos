@@ -71,7 +71,6 @@ nav.sidebar {
   height: 100vh;
 }
 nav.sidebar > div {
-  background: #eef0f9;
   box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
   position: absolute;
@@ -144,35 +143,18 @@ main {
 .top-header {
   align-items: center;
   border-bottom: 1px solid #ddd;
-  border-radius: 8px;
-  background: #333;
-  color: #eee;
   display: flex;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  height: 32px;
+  gap: 16px;
   justify-content: space-between;
-  min-height: 32px;
   margin: 5px;
-  padding: 20px;
+  padding: 2px 8px;
   text-decoration-thickness: 1px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.view-header {
-  align-items: center;
-  color: #444;
-  display: flex;
-  font-size: 10pt;
-  gap: 16px;
-  height: 22px;
-  padding: 0 8px;
-  /* all one line */
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  justify-content: space-between;
-}
 .viewer {
   display: flex;
   flex: 1;
@@ -246,14 +228,155 @@ main {
   text-align: right;
 }
 
-.hightable thead td:first-child {
-  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center 6px;
-  text-overflow: clip;
+.hightable thead th {
+  padding: 2px 8px;
 }
 
-/* version slider */
-.version-slider {
-  display: flex;
+.hightable thead td:first-child {
+  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center center;
+  text-overflow: clip;
+}
+.hightable tbody td {
+  font-size: 12.8px;
+}
+.hightable .col-header-row {
   align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.hightable .col-header {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.hightable .col-name {
+  font-size: 12.8px;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hightable .col-type {
+  color: #888;
+  font-size: 10px;
+  font-weight: normal;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* snapshot slider */
+.snapshot-slider {
+  color: #aaa;
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+  font-weight: normal;
+  font-family: monospace;
+  gap: 1px;
+  margin: 0 0 0 auto;
+  min-width: 0;
+}
+.snapshot-slider > input {
+  border: none;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+.snapshot-meta {
+  display: flex;
   gap: 8px;
+  justify-content: space-between;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-header .file-name {
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* sql input */
+.sql-container {
+  display: flex;
+  gap: 8px;
+}
+.sql-input-area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.sql-input {
+  border: none;
+  border-bottom: 1px solid #ddd;
+  border-radius: 0;
+  color: #333;
+  font: 14px monospace;
+  line-height: normal;
+  letter-spacing: normal;
+  min-height: 80px;
+  padding: 8px 12px 24px 12px;
+  width: 100%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.sql-input:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
+}
+.sql-input:focus {
+  border: none;
+  border-bottom: 2px solid #99e;
+  outline: none;
+}
+.sql-input.sql-error {
+  border-bottom-color: red;
+}
+
+.sql-error-highlight {
+  font: inherit;
+  text-decoration: underline wavy #cc3333;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
+.sql-input span {
+  font: inherit;
+}
+.sql-keyword { color: #0000ff; }
+.sql-function { color: #795e26; }
+.sql-string { color: #a31515; }
+.sql-number { color: #098658; }
+.sql-operator { color: #000000; }
+.sql-identifier { color: #001080; }
+
+.query-stats {
+  bottom: 4px;
+  color: #999;
+  display: flex;
+  font-size: 11px;
+  gap: 16px;
+  pointer-events: none;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+}
+.query-stats .sql-error-msg {
+  color: #d33;
+  font: 14px monospace;
+  margin-bottom: 2px;
+}
+.query-stats .query-times {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
 }
