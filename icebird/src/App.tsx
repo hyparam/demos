@@ -1,7 +1,8 @@
-import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { icebergDataSource, icebergMetadata } from 'icebird'
 import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import type { AsyncDataSource } from 'squirreling'
+import { parseTableUrl } from './database.js'
 import Layout from './Layout.js'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
@@ -16,6 +17,11 @@ export default function App(): ReactNode {
   const [metadata, setMetadata] = useState<TableMetadata>()
   const [snapshots, setSnapshots] = useState<Snapshot[]>()
   const [snapshotId, setSnapshotId] = useState<bigint>()
+
+  const { tableName } = useMemo(
+    () => tableUrl ? parseTableUrl(tableUrl) : { tableName: '' },
+    [tableUrl],
+  )
 
   const setUnknownError = useCallback((e: unknown) => {
     if (e === undefined || e instanceof Error) {
@@ -92,6 +98,7 @@ export default function App(): ReactNode {
     tableUrl && metadata && snapshots && snapshotId !== undefined && dataSource
       ? {
         tableUrl,
+        tableName,
         metadata,
         snapshots,
         snapshotId,

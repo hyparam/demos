@@ -3,6 +3,7 @@ import { icebergQuery } from 'icebird'
 import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { AsyncDataSource, parseSql } from 'squirreling'
+import { quoteIdentifier } from './database.js'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
 import SnapshotSlider from './SnapshotSlider.js'
 import { highlightSql } from './sqlHighlight.js'
@@ -16,6 +17,7 @@ interface SqlErrorInfo {
 
 export interface PageProps {
   tableUrl: string
+  tableName: string
   metadata: TableMetadata
   dataSource: AsyncDataSource
   snapshots: Snapshot[]
@@ -24,8 +26,6 @@ export interface PageProps {
   initialQuery?: string
   setError: (e: unknown) => void
 }
-
-const DEFAULT_QUERY = 'SELECT * FROM table LIMIT 500'
 
 const empty: DataFrame = {
   columnDescriptors: [],
@@ -40,6 +40,7 @@ const empty: DataFrame = {
  */
 export default function Page({
   tableUrl,
+  tableName,
   metadata,
   dataSource,
   snapshots,
@@ -50,8 +51,12 @@ export default function Page({
 }: PageProps): ReactNode {
   const name = metadata.location
   const sourceColumns = useMemo(() => dataSource.columns, [dataSource])
+  const defaultQuery = useMemo(
+    () => `SELECT * FROM ${quoteIdentifier(tableName)} LIMIT 500`,
+    [tableName],
+  )
 
-  const [query, setQuery] = useState(initialQuery ?? DEFAULT_QUERY)
+  const [query, setQuery] = useState(initialQuery ?? defaultQuery)
   const [queryDf, setQueryDf] = useState<DataFrame>(empty)
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
@@ -69,14 +74,14 @@ export default function Page({
     setSqlError(undefined)
     const params = new URLSearchParams(location.search)
     if (params.has('key')) {
-      if (newQuery && newQuery !== DEFAULT_QUERY) {
+      if (newQuery && newQuery !== defaultQuery) {
         params.set('query', newQuery)
       } else {
         params.delete('query')
       }
       history.replaceState({}, '', `${location.pathname}?${params}`)
     }
-  }, [setError])
+  }, [setError, defaultQuery])
 
   // Run the SQL query through icebergQuery against the pinned data source.
   useEffect(() => {
@@ -111,7 +116,7 @@ export default function Page({
 
     icebergQuery({
       query,
-      tables: { table: dataSource },
+      tables: { [tableName]: dataSource },
       signal: abortController.signal,
     }).then(results => {
       if (abortController.signal.aborted) return
@@ -130,7 +135,7 @@ export default function Page({
     })
 
     return () => { abortController.abort() }
-  }, [query, dataSource, sourceColumns])
+  }, [query, tableName, dataSource, sourceColumns])
 
   // Track row count + timing on the active queryDf
   useEffect(() => {
