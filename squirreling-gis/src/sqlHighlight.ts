@@ -92,7 +92,7 @@ function collectFunctionPositions(stmt: Statement, positions: Set<number>): void
   }
 
   // Process FROM subquery
-  if (stmt.from.type === 'subquery') {
+  if (stmt.from?.type === 'subquery') {
     collectFunctionPositions(stmt.from.query, positions)
   }
 
