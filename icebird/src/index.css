@@ -228,15 +228,16 @@ main {
   text-align: right;
 }
 
+.hightable thead th {
+  padding: 2px 8px;
+}
+
 .hightable thead td:first-child {
-  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center 6px;
+  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center center;
   text-overflow: clip;
 }
 .hightable tbody td {
   font-size: 12.8px;
-}
-.hightable thead th {
-  height: 40px;
 }
 .hightable .col-header-row {
   align-items: center;
@@ -251,6 +252,9 @@ main {
   min-width: 0;
 }
 .hightable .col-name {
+  font-size: 12.8px;
+  font-weight: 500;
+  line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
