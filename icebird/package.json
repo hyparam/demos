@@ -15,7 +15,7 @@
   "dependencies": {
     "hightable": "0.26.4",
     "hyperparam": "0.4.14",
-    "icebird": "0.8.1",
+    "icebird": "0.8.2",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "squirreling": "0.12.18"

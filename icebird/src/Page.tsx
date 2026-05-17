@@ -1,6 +1,6 @@
-import HighTable, { DataFrame } from 'hightable'
+import HighTable, { ColumnConfiguration, DataFrame } from 'hightable'
 import { icebergDataSource, icebergMetadata, icebergQuery } from 'icebird'
-import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
+import type { IcebergType, Snapshot, TableMetadata } from 'icebird/src/types.js'
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AsyncDataSource, extractTables, parseSql } from 'squirreling'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
@@ -21,6 +21,13 @@ export interface PageProps {
 }
 
 const DEFAULT_QUERY = 'SELECT * FROM events LIMIT 500'
+
+function formatIcebergType(type: IcebergType): string {
+  if (typeof type === 'string') return type
+  if (type.type === 'struct') return 'struct'
+  if (type.type === 'list') return `list<${formatIcebergType(type.element)}>`
+  return `map<${formatIcebergType(type.key)}, ${formatIcebergType(type.value)}>`
+}
 
 const empty: DataFrame = {
   columnDescriptors: [],
@@ -138,6 +145,36 @@ export default function Page({
     () => firstDataSource?.columns ?? [],
     [firstDataSource],
   )
+
+  // Column name -> Iceberg type, from the first-referenced table's current schema.
+  // Used to render the type below each column name in the table header.
+  const columnTypes = useMemo(() => {
+    const map = new Map<string, string>()
+    if (!metadata) return map
+    const schema = metadata.schemas.find(s => s['schema-id'] === metadata['current-schema-id'])
+    if (!schema) return map
+    for (const field of schema.fields) {
+      map.set(field.name, formatIcebergType(field.type))
+    }
+    return map
+  }, [metadata])
+
+  const columnConfiguration = useMemo<ColumnConfiguration>(() => {
+    const config: ColumnConfiguration = {}
+    for (const { name } of queryDf.columnDescriptors) {
+      const type = columnTypes.get(name)
+      config[name] = {
+        headerComponent: controls => <div className='col-header-row'>
+          <div className='col-header'>
+            <span className='col-name'>{name}</span>
+            {type && <span className='col-type'>{type}</span>}
+          </div>
+          {controls}
+        </div>,
+      }
+    }
+    return config
+  }, [queryDf, columnTypes])
 
   const handleQueryChange = useCallback((newQuery: string) => {
     setQueryTime(undefined)
@@ -257,6 +294,7 @@ export default function Page({
       focus={false}
       cacheKey={databaseUrl}
       className='hightable'
+      columnConfiguration={columnConfiguration}
       data={queryDf}
       onError={setError}
     />
