@@ -267,7 +267,7 @@ export default function Page({
         snapshots={snapshots}
         value={snapshotId}
         onChange={setSnapshotId}
-        rowCount={queryDf === empty ? '?' : queryDf.numRows.toLocaleString()}
+        rowCount={firstDataSource?.numRows?.toLocaleString() ?? '?'}
       />}
     </div>
     <div className='sql-container'>
