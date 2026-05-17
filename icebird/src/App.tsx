@@ -1,12 +1,10 @@
-import { ReactNode } from 'react'
+import { ReactNode, useCallback, useEffect, useState } from 'react'
+import { icebergDataSource, icebergMetadata } from 'icebird'
+import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
+import type { AsyncDataSource } from 'squirreling'
+import Layout from './Layout.js'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
-
-import { icebergListVersions, icebergMetadata } from 'icebird'
-import type { TableMetadata } from 'icebird/src/types.js'
-import { useCallback, useEffect, useState } from 'react'
-import Layout from './Layout.js'
-import { buildIcebergDataSource } from './data.js'
 
 export default function App(): ReactNode {
   const params = new URLSearchParams(location.search)
@@ -16,53 +14,55 @@ export default function App(): ReactNode {
   const [error, setError] = useState<Error>()
   const [pageProps, setPageProps] = useState<PageProps>()
   const [tableUrl, setTableUrl] = useState(queryUrl)
-  const [version, setVersion] = useState<string>()
-  const [versions, setVersions] = useState<string[] | undefined>()
+  const [metadata, setMetadata] = useState<TableMetadata>()
+  const [snapshots, setSnapshots] = useState<Snapshot[]>()
+  const [snapshotId, setSnapshotId] = useState<bigint>()
 
   const setUnknownError = useCallback((e: unknown) => {
-    setError(e === undefined || e instanceof Error ? e : new Error(String(e)))
+    if (e === undefined || e instanceof Error) {
+      setError(e)
+    } else {
+      setError(new Error(typeof e === 'string' ? e : JSON.stringify(e)))
+    }
   }, [])
 
+  // Load the latest metadata once per tableUrl.
   useEffect(() => {
-    if (!tableUrl || versions) return
-    icebergListVersions({ tableUrl })
-      .then(versions => {
-        setVersions(versions)
-        if (versions.length === 0) throw new Error('No iceberg metadata versions found')
-        setVersion(versions[versions.length - 1])
+    if (!tableUrl || metadata) return
+    icebergMetadata({ tableUrl })
+      .then(md => {
+        if (!md.snapshots?.length) throw new Error('No iceberg snapshots found')
+        const sorted = [...md.snapshots].sort((a, b) => a['timestamp-ms'] - b['timestamp-ms'])
+        setMetadata(md)
+        setSnapshots(sorted)
+        const current = md['current-snapshot-id']
+        const initial = current ?? sorted[sorted.length - 1]['snapshot-id']
+        setSnapshotId(BigInt(initial))
       })
       .catch(setUnknownError)
-  }, [tableUrl, versions, setUnknownError])
+  }, [tableUrl, metadata, setUnknownError])
 
-  if (pageProps && version && pageProps.version !== version) {
-    setPageProps({ ...pageProps, version })
-  }
-
+  // Build a fresh data source whenever the selected snapshot changes.
   useEffect(() => {
-    if (!tableUrl || !versions || !version) return
+    if (!tableUrl || !metadata || !snapshots || snapshotId === undefined) return
     let cancelled = false
-    const metadataFileName = `${version}.metadata.json`
-    icebergMetadata({ tableUrl, metadataFileName })
-      .then(async (metadata: TableMetadata) => {
-        if (!metadata.snapshots?.length) {
-          throw new Error('No iceberg snapshots found')
-        }
-        const dataSource = await buildIcebergDataSource(tableUrl, metadata)
+    icebergDataSource({ tableUrl, metadata, snapshotId })
+      .then((dataSource: AsyncDataSource) => {
         if (cancelled) return
         setPageProps({
           tableUrl,
           metadata,
+          snapshots,
+          snapshotId,
+          setSnapshotId,
           dataSource,
-          versions,
-          version,
-          setVersion,
           initialQuery,
           setError: setUnknownError,
         })
       })
       .catch(setUnknownError)
     return () => { cancelled = true }
-  }, [tableUrl, versions, version, initialQuery, setUnknownError])
+  }, [tableUrl, metadata, snapshots, snapshotId, initialQuery, setUnknownError])
 
   const setUrlAndHistory = useCallback(
     (url: string) => {

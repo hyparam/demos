@@ -1,11 +1,12 @@
 import HighTable, { DataFrame } from 'hightable'
-import type { TableMetadata } from 'icebird/src/types.js'
+import { icebergQuery } from 'icebird'
+import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
-import { AsyncDataSource, executePlan, parseSql, planSql } from 'squirreling'
+import { AsyncDataSource, parseSql } from 'squirreling'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
+import SnapshotSlider from './SnapshotSlider.js'
 import { highlightSql } from './sqlHighlight.js'
 import { squirrelingDataFrame } from './squirrelingDataFrame.js'
-import VersionSlider from './VersionSlider.js'
 
 interface SqlErrorInfo {
   message: string
@@ -17,9 +18,9 @@ export interface PageProps {
   tableUrl: string
   metadata: TableMetadata
   dataSource: AsyncDataSource
-  versions: string[]
-  version: string
-  setVersion: (version: string) => void
+  snapshots: Snapshot[]
+  snapshotId: bigint
+  setSnapshotId: (id: bigint) => void
   initialQuery?: string
   setError: (e: unknown) => void
 }
@@ -34,16 +35,16 @@ const empty: DataFrame = {
 }
 
 /**
- * Icebird demo viewer page. Supports SQL queries against the Iceberg table
- * via squirreling executePlan over an icebergDataSource.
+ * Icebird demo viewer page. Executes SQL via icebergQuery against a pre-built
+ * icebergDataSource that is pinned to the selected snapshot id.
  */
 export default function Page({
   tableUrl,
   metadata,
   dataSource,
-  versions,
-  version,
-  setVersion,
+  snapshots,
+  snapshotId,
+  setSnapshotId,
   initialQuery,
   setError,
 }: PageProps): ReactNode {
@@ -77,36 +78,19 @@ export default function Page({
     }
   }, [setError])
 
-  // Parse and execute the SQL query on every change of query/dataSource
+  // Run the SQL query through icebergQuery against the pinned data source.
   useEffect(() => {
     if (query.length <= 2) {
       queueMicrotask(() => { setQueryDf(empty) })
       return
     }
-    // We use parseSql + planSql + executePlan here, mirroring the path that
-    // icebergQuery (icebird 0.5.0) takes internally. icebergQuery itself
-    // requires a REST catalog; this demo uses tableUrl, so we skip that step.
     const abortController = new AbortController()
+    // Parse separately so we can derive column descriptors and surface
+    // position info on parse errors. icebergQuery parses internally too;
+    // parsing twice is cheap and keeps the error path consistent.
+    let parsedQuery
     try {
-      const parsedQuery = parseSql({ query })
-      const plan = planSql({ query: parsedQuery })
-      const results = executePlan({
-        plan,
-        context: {
-          tables: { table: dataSource },
-          signal: abortController.signal,
-        },
-      })
-      const resultsDf = squirrelingDataFrame({
-        rowGen: results.rows(),
-        query: parsedQuery,
-        sourceColumns,
-      })
-      queueMicrotask(() => {
-        if (!abortController.signal.aborted) {
-          setQueryDf(resultsDf)
-        }
-      })
+      parsedQuery = parseSql({ query })
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err)
       const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
@@ -116,7 +100,29 @@ export default function Page({
           setQueryDf(empty)
         }
       })
+      return () => { abortController.abort() }
     }
+
+    icebergQuery({
+      query,
+      tables: { table: dataSource },
+      signal: abortController.signal,
+    }).then(results => {
+      if (abortController.signal.aborted) return
+      const resultsDf = squirrelingDataFrame({
+        rowGen: results.rows(),
+        query: parsedQuery,
+        sourceColumns,
+      })
+      setQueryDf(resultsDf)
+    }).catch((err: unknown) => {
+      if (abortController.signal.aborted) return
+      const message = err instanceof Error ? err.message : String(err)
+      const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
+      setSqlError({ message, positionStart, positionEnd })
+      setQueryDf(empty)
+    })
+
     return () => { abortController.abort() }
   }, [query, dataSource, sourceColumns])
 
@@ -152,10 +158,10 @@ export default function Page({
       </div>
     </div>
     <div className='view-header'>
-      <VersionSlider
-        versions={versions}
-        value={version}
-        onChange={setVersion}
+      <SnapshotSlider
+        snapshots={snapshots}
+        value={snapshotId}
+        onChange={setSnapshotId}
       />
     </div>
     <div className='sql-container'>

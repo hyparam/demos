@@ -251,11 +251,13 @@ main {
   text-overflow: clip;
 }
 
-/* version slider */
-.version-slider {
+/* snapshot slider */
+.snapshot-slider {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-left: auto;
+  font-family: monospace;
 }
 
 .top-header .file-name {
