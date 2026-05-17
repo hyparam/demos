@@ -1,4 +1,4 @@
-import { ReactNode, useCallback, useEffect, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { icebergDataSource, icebergMetadata } from 'icebird'
 import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
 import type { AsyncDataSource } from 'squirreling'
@@ -12,7 +12,6 @@ export default function App(): ReactNode {
   const initialQuery = params.get('query') ?? undefined
 
   const [error, setError] = useState<Error>()
-  const [pageProps, setPageProps] = useState<PageProps>()
   const [tableUrl, setTableUrl] = useState(queryUrl)
   const [metadata, setMetadata] = useState<TableMetadata>()
   const [snapshots, setSnapshots] = useState<Snapshot[]>()
@@ -42,27 +41,39 @@ export default function App(): ReactNode {
       .catch(setUnknownError)
   }, [tableUrl, metadata, setUnknownError])
 
-  // Build a fresh data source whenever the selected snapshot changes.
+  // Cache one AsyncDataSource per snapshotId so slider backtracking is free.
+  // Reset when the table or metadata changes — caches are scoped to a
+  // specific metadata fetch.
+  const sourceCache = useRef(new Map<string, Promise<AsyncDataSource>>())
+  useEffect(() => {
+    sourceCache.current = new Map()
+  }, [tableUrl, metadata])
+
+  const [dataSource, setDataSource] = useState<AsyncDataSource>()
+
+  // Build (or fetch from cache) the data source for the selected snapshot.
   useEffect(() => {
     if (!tableUrl || !metadata || !snapshots || snapshotId === undefined) return
     let cancelled = false
-    icebergDataSource({ tableUrl, metadata, snapshotId })
-      .then((dataSource: AsyncDataSource) => {
+    const cache = sourceCache.current
+    const key = snapshotId.toString()
+    let promise = cache.get(key)
+    if (!promise) {
+      promise = icebergDataSource({ tableUrl, metadata, snapshotId })
+      cache.set(key, promise)
+    }
+    promise
+      .then((source: AsyncDataSource) => {
         if (cancelled) return
-        setPageProps({
-          tableUrl,
-          metadata,
-          snapshots,
-          snapshotId,
-          setSnapshotId,
-          dataSource,
-          initialQuery,
-          setError: setUnknownError,
-        })
+        setDataSource(source)
       })
-      .catch(setUnknownError)
+      .catch((err: unknown) => {
+        // Don't cache failures - let the next attempt retry.
+        cache.delete(key)
+        setUnknownError(err)
+      })
     return () => { cancelled = true }
-  }, [tableUrl, metadata, snapshots, snapshotId, initialQuery, setUnknownError])
+  }, [tableUrl, metadata, snapshots, snapshotId, setUnknownError])
 
   const setUrlAndHistory = useCallback(
     (url: string) => {
@@ -73,6 +84,23 @@ export default function App(): ReactNode {
     },
     [setTableUrl],
   )
+
+  // Slider position (`snapshotId`) updates instantly on input; `dataSource`
+  // lags by however long the icebergDataSource build takes for that snapshot
+  // (cached → microtask, uncached → manifest fetch). The Page renders both.
+  const pageProps: PageProps | undefined =
+    tableUrl && metadata && snapshots && snapshotId !== undefined && dataSource
+      ? {
+        tableUrl,
+        metadata,
+        snapshots,
+        snapshotId,
+        setSnapshotId,
+        dataSource,
+        initialQuery,
+        setError: setUnknownError,
+      }
+      : undefined
 
   return <Layout error={error}>
     {pageProps ? <Page {...pageProps} /> : <Welcome setTableUrl={setUrlAndHistory} />}

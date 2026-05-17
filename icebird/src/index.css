@@ -160,19 +160,6 @@ main {
   white-space: nowrap;
 }
 
-.view-header {
-  align-items: center;
-  color: #444;
-  display: flex;
-  font-size: 10pt;
-  gap: 16px;
-  height: 22px;
-  padding: 0 8px;
-  /* all one line */
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  justify-content: space-between;
-}
 .viewer {
   display: flex;
   flex: 1;
@@ -253,25 +240,33 @@ main {
 
 /* snapshot slider */
 .snapshot-slider {
-  display: flex;
   align-items: center;
+  color: #aaa;
+  display: flex;
+  font-size: 12px;
+  font-weight: normal;
+  font-family: monospace;
   gap: 8px;
   margin-left: auto;
-  font-family: monospace;
+  min-width: 0;
+}
+.snapshot-slider > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-header .row-count {
+  color: #aaa;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: normal;
+  margin-left: 8px;
 }
 
 .top-header .file-name {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
-}
-.top-header .file-info {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  font-weight: normal;
-  color: #aaa;
-  flex-shrink: 0;
 }
 
 /* sql input */

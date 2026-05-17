@@ -8,9 +8,9 @@ interface SnapshotSliderProps {
 }
 
 /**
- * Time-travel slider over an iceberg table's snapshot history. The snapshots
- * are expected oldest → newest; the slider shows the selected snapshot's
- * timestamp and id.
+ * Time-travel slider over an iceberg table's snapshot history. Fires
+ * `onChange` on every input event — the parent commits instantly and relies
+ * on its data-source cache + abort handling to keep this responsive.
  */
 export default function SnapshotSlider({
   snapshots,
@@ -22,11 +22,10 @@ export default function SnapshotSlider({
     [snapshots, value],
   )
   const selected = snapshots[idx]
-  const label = `${new Date(selected['timestamp-ms']).toISOString().replace('T', ' ').slice(0, 19)} · ${selected['snapshot-id']}`
+  const timestamp = new Date(selected['timestamp-ms']).toISOString().replace('T', ' ').slice(0, 19)
 
   return (
-    <label className='snapshot-slider'>
-      <span>{label}</span>
+    <label className='snapshot-slider' title={String(selected['snapshot-id'])}>
       <input
         type='range'
         min={0}
@@ -38,6 +37,7 @@ export default function SnapshotSlider({
           onChange(BigInt(next['snapshot-id']))
         }}
       />
+      <span>{timestamp}</span>
     </label>
   )
 }

@@ -103,6 +103,12 @@ export default function Page({
       return () => { abortController.abort() }
     }
 
+    // Clear the displayed row count immediately so the previous snapshot's
+    // total doesn't linger while the new query is loading.
+    queueMicrotask(() => {
+      if (!abortController.signal.aborted) setQueryDf(empty)
+    })
+
     icebergQuery({
       query,
       tables: { table: dataSource },
@@ -153,16 +159,12 @@ export default function Page({
   return <>
     <div className='top-header'>
       <span className='file-name'>{name}</span>
-      <div className='file-info'>
-        <span>{queryDf.numRows.toLocaleString()} rows</span>
-      </div>
-    </div>
-    <div className='view-header'>
       <SnapshotSlider
         snapshots={snapshots}
         value={snapshotId}
         onChange={setSnapshotId}
       />
+      <span className='row-count'>({queryDf === empty ? '?' : queryDf.numRows.toLocaleString()} rows)</span>
     </div>
     <div className='sql-container'>
       <div className='sql-input-area'>
