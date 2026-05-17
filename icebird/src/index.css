@@ -232,6 +232,9 @@ main {
   background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center 6px;
   text-overflow: clip;
 }
+.hightable tbody td {
+  font-size: 12.8px;
+}
 
 /* snapshot slider */
 .snapshot-slider {

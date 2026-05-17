@@ -1,9 +1,8 @@
 import HighTable, { DataFrame } from 'hightable'
-import { icebergQuery } from 'icebird'
+import { icebergDataSource, icebergMetadata, icebergQuery } from 'icebird'
 import type { Snapshot, TableMetadata } from 'icebird/src/types.js'
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
-import { AsyncDataSource, parseSql } from 'squirreling'
-import { quoteIdentifier } from './database.js'
+import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AsyncDataSource, extractTables, parseSql } from 'squirreling'
 import { HighlightedTextArea } from './HighlightedTextArea.js'
 import SnapshotSlider from './SnapshotSlider.js'
 import { highlightSql } from './sqlHighlight.js'
@@ -16,16 +15,12 @@ interface SqlErrorInfo {
 }
 
 export interface PageProps {
-  tableUrl: string
-  tableName: string
-  metadata: TableMetadata
-  dataSource: AsyncDataSource
-  snapshots: Snapshot[]
-  snapshotId: bigint
-  setSnapshotId: (id: bigint) => void
+  databaseUrl: string
   initialQuery?: string
   setError: (e: unknown) => void
 }
+
+const DEFAULT_QUERY = 'SELECT * FROM events LIMIT 500'
 
 const empty: DataFrame = {
   columnDescriptors: [],
@@ -35,107 +30,174 @@ const empty: DataFrame = {
 }
 
 /**
- * Icebird demo viewer page. Executes SQL via icebergQuery against a pre-built
- * icebergDataSource that is pinned to the selected snapshot id.
+ * Icebird demo viewer page. Resolves every table referenced in the SQL by
+ * joining `databaseUrl` with the SQL identifier; icebergQuery loads each
+ * table lazily. The snapshot slider applies to the first table referenced
+ * in the query — that one is pre-built as a snapshot-pinned dataSource so
+ * the slider has something to move.
  */
 export default function Page({
-  tableUrl,
-  tableName,
-  metadata,
-  dataSource,
-  snapshots,
-  snapshotId,
-  setSnapshotId,
+  databaseUrl,
   initialQuery,
   setError,
 }: PageProps): ReactNode {
-  const name = metadata.location
-  const sourceColumns = useMemo(() => dataSource.columns, [dataSource])
-  const defaultQuery = useMemo(
-    () => `SELECT * FROM ${quoteIdentifier(tableName)} LIMIT 500`,
-    [tableName],
-  )
-
-  const [query, setQuery] = useState(initialQuery ?? defaultQuery)
+  const [query, setQuery] = useState(initialQuery ?? DEFAULT_QUERY)
   const [queryDf, setQueryDf] = useState<DataFrame>(empty)
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
-  const [sqlError, setSqlError] = useState<SqlErrorInfo | undefined>()
+  const [runtimeError, setRuntimeError] = useState<SqlErrorInfo | undefined>()
   // Bumped on numrowschange events so we re-read queryDf.numRows in render
   const [, forceUpdate] = useState(0)
 
   const highlights = useMemo(() => highlightSql(query), [query])
+
+  // Parse upfront so we can derive table refs and the slider's anchor table.
+  // Parse failures land in `parseError`; later effects skip if there's no AST.
+  const parseResult = useMemo((): {
+    parsedQuery?: ReturnType<typeof parseSql>
+    refs: string[]
+    parseError?: SqlErrorInfo
+  } => {
+    try {
+      const parsed = parseSql({ query })
+      return { parsedQuery: parsed, refs: extractTables(parsed) }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err)
+      const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
+      return { refs: [], parseError: { message, positionStart, positionEnd } }
+    }
+  }, [query])
+  const { parsedQuery, refs, parseError } = parseResult
+  const sqlError = parseError ?? runtimeError
+
+  const firstRef = refs[0]
+  const firstRefUrl = useMemo(
+    () => firstRef ? databaseUrl.replace(/\/+$/, '') + '/' + firstRef : undefined,
+    [databaseUrl, firstRef],
+  )
+
+  // Snapshot metadata for the first-referenced table (drives the slider).
+  const [metadata, setMetadata] = useState<TableMetadata>()
+  const [snapshots, setSnapshots] = useState<Snapshot[]>()
+  const [snapshotId, setSnapshotId] = useState<bigint>()
+
+  useEffect(() => {
+    if (!firstRefUrl) return
+    let cancelled = false
+    queueMicrotask(() => {
+      if (cancelled) return
+      setMetadata(undefined)
+      setSnapshots(undefined)
+      setSnapshotId(undefined)
+    })
+    icebergMetadata({ tableUrl: firstRefUrl })
+      .then(md => {
+        if (cancelled) return
+        if (!md.snapshots?.length) throw new Error('No iceberg snapshots found')
+        const sorted = [...md.snapshots].sort((a, b) => a['timestamp-ms'] - b['timestamp-ms'])
+        setMetadata(md)
+        setSnapshots(sorted)
+        const current = md['current-snapshot-id']
+        const initial = current ?? sorted[sorted.length - 1]['snapshot-id']
+        setSnapshotId(BigInt(initial))
+      })
+      .catch((err: unknown) => { if (!cancelled) setError(err) })
+    return () => { cancelled = true }
+  }, [firstRefUrl, setError])
+
+  // Cache one snapshot-pinned dataSource per snapshotId so slider backtracking
+  // is free. Reset when the first-ref table or its metadata changes.
+  const sourceCache = useRef(new Map<string, Promise<AsyncDataSource>>())
+  useEffect(() => {
+    sourceCache.current = new Map()
+  }, [firstRefUrl, metadata])
+
+  const [firstDataSource, setFirstDataSource] = useState<AsyncDataSource>()
+
+  useEffect(() => {
+    if (!firstRefUrl || !metadata || snapshotId === undefined) return
+    let cancelled = false
+    const cache = sourceCache.current
+    const key = snapshotId.toString()
+    let promise = cache.get(key)
+    if (!promise) {
+      promise = icebergDataSource({ tableUrl: firstRefUrl, metadata, snapshotId })
+      cache.set(key, promise)
+    }
+    promise
+      .then(source => { if (!cancelled) setFirstDataSource(source) })
+      .catch((err: unknown) => {
+        // Don't cache failures — let the next attempt retry.
+        cache.delete(key)
+        if (!cancelled) setError(err)
+      })
+    return () => { cancelled = true }
+  }, [firstRefUrl, metadata, snapshotId, setError])
+
+  const sourceColumns = useMemo(
+    () => firstDataSource?.columns ?? [],
+    [firstDataSource],
+  )
 
   const handleQueryChange = useCallback((newQuery: string) => {
     setQueryTime(undefined)
     setFirstRowTime(undefined)
     setQuery(newQuery)
     setError(undefined)
-    setSqlError(undefined)
+    setRuntimeError(undefined)
     const params = new URLSearchParams(location.search)
     if (params.has('key')) {
-      if (newQuery && newQuery !== defaultQuery) {
+      if (newQuery && newQuery !== DEFAULT_QUERY) {
         params.set('query', newQuery)
       } else {
         params.delete('query')
       }
       history.replaceState({}, '', `${location.pathname}?${params}`)
     }
-  }, [setError, defaultQuery])
+  }, [setError])
 
-  // Run the SQL query through icebergQuery against the pinned data source.
+  // Run the SQL query. Tables map: the first-referenced table is the
+  // snapshot-pinned dataSource; every other ref is a URL string that
+  // icebergQuery resolves to the latest snapshot on demand.
   useEffect(() => {
-    if (query.length <= 2) {
+    if (parseError || !parsedQuery) {
       queueMicrotask(() => { setQueryDf(empty) })
       return
     }
-    const abortController = new AbortController()
-    // Parse separately so we can derive column descriptors and surface
-    // position info on parse errors. icebergQuery parses internally too;
-    // parsing twice is cheap and keeps the error path consistent.
-    let parsedQuery
-    try {
-      parsedQuery = parseSql({ query })
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
-      const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
-      queueMicrotask(() => {
-        if (!abortController.signal.aborted) {
-          setSqlError({ message, positionStart, positionEnd })
-          setQueryDf(empty)
-        }
-      })
-      return () => { abortController.abort() }
-    }
+    if (refs.length && !firstDataSource) return // wait for snapshot-pinned source
 
-    // Clear the displayed row count immediately so the previous snapshot's
-    // total doesn't linger while the new query is loading.
+    const abortController = new AbortController()
     queueMicrotask(() => {
       if (!abortController.signal.aborted) setQueryDf(empty)
     })
 
-    icebergQuery({
-      query,
-      tables: { [tableName]: dataSource },
-      signal: abortController.signal,
-    }).then(results => {
-      if (abortController.signal.aborted) return
-      const resultsDf = squirrelingDataFrame({
-        rowGen: results.rows(),
-        query: parsedQuery,
-        sourceColumns,
+    const tables: Record<string, string | AsyncDataSource> = {}
+    for (const ref of refs) {
+      tables[ref] = ref === firstRef && firstDataSource
+        ? firstDataSource
+        : databaseUrl.replace(/\/+$/, '') + '/' + ref
+    }
+
+    icebergQuery({ query, tables, signal: abortController.signal })
+      .then(results => {
+        if (abortController.signal.aborted) return
+        const resultsDf = squirrelingDataFrame({
+          rowGen: results.rows(),
+          query: parsedQuery,
+          sourceColumns,
+        })
+        setQueryDf(resultsDf)
       })
-      setQueryDf(resultsDf)
-    }).catch((err: unknown) => {
-      if (abortController.signal.aborted) return
-      const message = err instanceof Error ? err.message : String(err)
-      const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
-      setSqlError({ message, positionStart, positionEnd })
-      setQueryDf(empty)
-    })
+      .catch((err: unknown) => {
+        if (abortController.signal.aborted) return
+        const message = err instanceof Error ? err.message : String(err)
+        const { positionStart, positionEnd } = err as { positionStart?: number, positionEnd?: number }
+        setRuntimeError({ message, positionStart, positionEnd })
+        setQueryDf(empty)
+      })
 
     return () => { abortController.abort() }
-  }, [query, tableName, dataSource, sourceColumns])
+  }, [query, parsedQuery, parseError, refs, firstRef, firstDataSource, databaseUrl, sourceColumns])
 
   // Track row count + timing on the active queryDf
   useEffect(() => {
@@ -163,13 +225,13 @@ export default function Page({
 
   return <>
     <div className='top-header'>
-      <span className='file-name'>{name}</span>
-      <SnapshotSlider
+      <span className='file-name'>{databaseUrl}</span>
+      {snapshots && snapshotId !== undefined && <SnapshotSlider
         snapshots={snapshots}
         value={snapshotId}
         onChange={setSnapshotId}
         rowCount={queryDf === empty ? '?' : queryDf.numRows.toLocaleString()}
-      />
+      />}
     </div>
     <div className='sql-container'>
       <div className='sql-input-area'>
@@ -193,7 +255,7 @@ export default function Page({
     </div>
     <HighTable
       focus={false}
-      cacheKey={tableUrl}
+      cacheKey={databaseUrl}
       className='hightable'
       data={queryDf}
       onError={setError}
