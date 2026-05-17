@@ -32,7 +32,7 @@ function resolveColumnNames(
   }
 
   const names: string[] = []
-  const starColumns = query.from.type === 'table'
+  const starColumns = query.from?.type === 'table'
     ? cteColumns.get(query.from.table.toLowerCase()) ?? sourceColumns
     : sourceColumns
 
