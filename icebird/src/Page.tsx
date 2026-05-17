@@ -163,8 +163,8 @@ export default function Page({
         snapshots={snapshots}
         value={snapshotId}
         onChange={setSnapshotId}
+        rowCount={queryDf === empty ? '?' : queryDf.numRows.toLocaleString()}
       />
-      <span className='row-count'>({queryDf === empty ? '?' : queryDf.numRows.toLocaleString()} rows)</span>
     </div>
     <div className='sql-container'>
       <div className='sql-input-area'>

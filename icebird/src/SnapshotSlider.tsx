@@ -5,6 +5,7 @@ interface SnapshotSliderProps {
   snapshots: Snapshot[]
   value: bigint
   onChange: (snapshotId: bigint) => void
+  rowCount?: string
 }
 
 /**
@@ -16,6 +17,7 @@ export default function SnapshotSlider({
   snapshots,
   value,
   onChange,
+  rowCount,
 }: SnapshotSliderProps): ReactNode {
   const idx = useMemo(
     () => Math.max(0, snapshots.findIndex(s => BigInt(s['snapshot-id']) === value)),
@@ -37,7 +39,10 @@ export default function SnapshotSlider({
           onChange(BigInt(next['snapshot-id']))
         }}
       />
-      <span>{timestamp}</span>
+      <div className='snapshot-meta'>
+        <span>{timestamp}</span>
+        {rowCount !== undefined && <span>({rowCount} rows)</span>}
+      </div>
     </label>
   )
 }

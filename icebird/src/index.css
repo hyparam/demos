@@ -71,7 +71,6 @@ nav.sidebar {
   height: 100vh;
 }
 nav.sidebar > div {
-  background: #eef0f9;
   box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
   height: 100vh;
   position: absolute;
@@ -144,17 +143,13 @@ main {
 .top-header {
   align-items: center;
   border-bottom: 1px solid #ddd;
-  border-radius: 8px;
-  background: #333;
-  color: #eee;
   display: flex;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
-  height: 32px;
+  gap: 16px;
   justify-content: space-between;
-  min-height: 32px;
   margin: 5px;
-  padding: 20px;
+  padding: 2px 12px;
   text-decoration-thickness: 1px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -240,30 +235,34 @@ main {
 
 /* snapshot slider */
 .snapshot-slider {
-  align-items: center;
   color: #aaa;
   display: flex;
+  flex-direction: column;
   font-size: 12px;
   font-weight: normal;
   font-family: monospace;
-  gap: 8px;
-  margin-left: auto;
+  gap: 1px;
+  margin: 0 0 0 auto;
   min-width: 0;
 }
-.snapshot-slider > span {
+.snapshot-slider > input {
+  border: none;
+  height: 12px;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+.snapshot-meta {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.top-header .row-count {
-  color: #aaa;
-  flex-shrink: 0;
-  font-size: 12px;
-  font-weight: normal;
-  margin-left: 8px;
-}
 
 .top-header .file-name {
+  font-family: monospace;
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
