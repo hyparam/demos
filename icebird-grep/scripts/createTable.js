@@ -15,7 +15,7 @@
 // Run with `npm run create-table`. Uses the `iceberg` AWS profile to write.
 
 import { fromIni } from '@aws-sdk/credential-providers'
-import { parquetMetadataAsync, parquetReadObjects } from 'hyparquet'
+import { asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync, parquetReadObjects } from 'hyparquet'
 import { ByteWriter, parquetWriteBuffer } from 'hyparquet-writer'
 import {
   fileCatalog,
@@ -44,9 +44,10 @@ const mainSchema = {
     { id: 1, name: 'id', required: true, type: 'long' },
     { id: 2, name: 'timestamp', required: true, type: 'string' },
     { id: 3, name: 'model', required: true, type: 'string' },
-    { id: 4, name: 'prompt', required: true, type: 'string' },
-    { id: 5, name: 'response', required: true, type: 'string' },
-    { id: 6, name: 'tokens', required: true, type: 'int' },
+    { id: 4, name: 'category', required: true, type: 'string' },
+    { id: 5, name: 'prompt', required: true, type: 'string' },
+    { id: 6, name: 'response', required: true, type: 'string' },
+    { id: 7, name: 'tokens', required: true, type: 'int' },
   ],
 }
 
@@ -61,75 +62,68 @@ const indexSchema = {
   ],
 }
 
-const MODELS = ['claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5', 'gpt-5', 'gpt-5-mini', 'gemini-3-pro']
+// Real conversation data from HuggingFaceH4/no_robots — 9.5K hand-written
+// prompt/response pairs across categories (Generation, Brainstorm, Chat,
+// Coding, Classify, Closed QA, Open QA, Extract, Rewrite, Summarize). Pulled
+// straight from the parquet on Hugging Face's refs/convert/parquet branch.
+const HF_PARQUET_URL = 'https://huggingface.co/datasets/HuggingFaceH4/no_robots/resolve/refs%2Fconvert%2Fparquet/default/train/0000.parquet'
 
-const PROMPT_TEMPLATES = [
-  ['How does {topic} affect modern {field}?', 'Explore the implications of {topic} on contemporary {field} practice.'],
-  ['Summarize {topic} in two sentences.', 'Provide a brief overview of {topic} suitable for a beginner.'],
-  ['Write a haiku about {topic}.', 'Compose a 5-7-5 syllable poem on {topic}.'],
-  ['What are the trade-offs of using {topic} for {field}?', 'Compare pros and cons of {topic} in {field}.'],
-  ['Explain {topic} like I am five years old.', 'A simple, friendly explanation of {topic} for a young child.'],
-  ['Generate test data for a {topic} system.', 'Produce realistic sample records for a {topic} application.'],
-  ['Debug this {field} error involving {topic}.', 'Help me figure out why my {field} code keeps crashing when {topic} is enabled.'],
-  ['Refactor my {topic} module to be more {adjective}.', 'Rewrite the {topic} module emphasizing {adjective} design.'],
-]
-
-const TOPICS = [
-  'iceberg tables', 'parquet files', 'full-text search', 'columnar storage', 'vector embeddings',
-  'serverless functions', 'edge caching', 'distributed consensus', 'Merkle trees', 'bloom filters',
-  'gradient descent', 'transformer attention', 'reinforcement learning', 'prompt injection', 'tool use',
-  'graph databases', 'event sourcing', 'CRDT replication', 'feature flags', 'observability',
-  'cold starts', 'JIT compilation', 'WebAssembly', 'service workers', 'TLS handshakes',
-  'CSS Grid layouts', 'React hooks', 'Rust ownership', 'Go channels', 'Python asyncio',
-  'PostgreSQL indexes', 'DuckDB queries', 'Iceberg manifests', 'S3 list-objects-v2',
-  'data lineage', 'schema evolution', 'time-travel queries', 'snapshot isolation',
-]
-
-const FIELDS = ['data engineering', 'machine learning', 'web development', 'systems programming', 'research', 'product design']
-const ADJECTIVES = ['modular', 'performant', 'readable', 'composable', 'testable', 'idiomatic']
-
-const RESPONSE_PHRASES = [
-  'Looking at this more carefully, the key insight is that {topic} sits at the intersection of {field} and pragmatism.',
-  'The short answer: yes, {topic} works well for {field}, but watch out for the cold-start latency.',
-  'I would start by sketching a {adjective} prototype, then layer in {topic} once the data model is stable.',
-  'One subtle gotcha with {topic}: the snapshot isolation only kicks in if you commit through the catalog, not the resolver.',
-  'For a {field} workload, parquetindex over an iceberg table gives you grep-like search without standing up Elastic.',
-  'Try this: bisect the failing snapshot, then re-run with {topic} disabled to confirm it is the regression.',
-  'A {adjective} approach is to push down the predicate into the parquet read so you never decode rows you do not need.',
-  'Honestly, the trick is to treat {topic} as a derived view of the main table — never the source of truth.',
-]
+// Synthetic envelope columns for the LLM-log framing. The conversations
+// themselves are real; the model/timestamp framing is invented.
+const MODELS = ['claude-opus-4-7', 'claude-sonnet-4-6', 'claude-haiku-4-5', 'gpt-5', 'gpt-5-mini', 'gemini-3-pro', 'llama-4-405b', 'mistral-large-2']
 
 function pick(arr, i) {
-  return arr[i % arr.length]
+  return arr[((i % arr.length) + arr.length) % arr.length]
 }
 
-function fill(template, ctx) {
-  return template.replace(/\{(\w+)\}/g, (_, k) => ctx[k] ?? `{${k}}`)
+// Rough char-per-token estimate. Good enough for demo display; not used for
+// search.
+function estimateTokens(text) {
+  return Math.max(1, Math.round(text.length / 4))
 }
 
-function generateRecords(n) {
+/**
+ * Fetch the no_robots parquet from HuggingFace, decode it, and flatten each
+ * row's `messages` list into a single prompt + response pair.
+ */
+async function fetchConversations() {
+  console.log(`Downloading no_robots train parquet from HuggingFace...`)
+  const buffer = cachedAsyncBuffer(await asyncBufferFromUrl({ url: HF_PARQUET_URL }))
+  const metadata = await parquetMetadataAsync(buffer)
+  const rows = await parquetReadObjects({ file: buffer, metadata })
+  console.log(`  fetched ${rows.length.toLocaleString()} rows`)
+
+  // `messages` is a list<struct{content,role}>. We want the first user turn as
+  // the prompt and the assistant's reply as the response. A handful of rows
+  // are multi-turn — join those into a transcript so the index still sees
+  // every utterance.
   const baseTs = Date.UTC(2026, 0, 1)
   const records = []
-  for (let i = 0; i < n; i++) {
-    const topic = pick(TOPICS, i * 7 + 3)
-    const field = pick(FIELDS, i * 11)
-    const adjective = pick(ADJECTIVES, i * 13)
-    const ctx = { topic, field, adjective }
-    const [promptShort, promptLong] = pick(PROMPT_TEMPLATES, i * 5)
-    const prompt = `${fill(promptShort, ctx)} ${fill(promptLong, ctx)}`
-    const responseBits = []
-    for (let r = 0; r < 3; r++) {
-      responseBits.push(fill(pick(RESPONSE_PHRASES, i * 17 + r), ctx))
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]
+    const messages = Array.isArray(r.messages) ? r.messages : []
+    const userTurns = []
+    const assistantTurns = []
+    for (const m of messages) {
+      const content = typeof m.content === 'string' ? m.content : ''
+      if (!content) continue
+      if (m.role === 'user') userTurns.push(content)
+      else if (m.role === 'assistant') assistantTurns.push(content)
     }
+    const prompt = userTurns.length ? userTurns.join('\n\n') : (typeof r.prompt === 'string' ? r.prompt : '')
+    const response = assistantTurns.join('\n\n')
+    if (!prompt || !response) continue
     records.push({
-      id: BigInt(i + 1),
-      timestamp: new Date(baseTs + i * 60_000).toISOString(),
-      model: pick(MODELS, i * 3 + 1),
+      id: BigInt(records.length + 1),
+      timestamp: new Date(baseTs + records.length * 47_000).toISOString(),
+      model: pick(MODELS, i * 7 + 3),
+      category: typeof r.category === 'string' ? r.category : 'Unknown',
       prompt,
-      response: responseBits.join(' '),
-      tokens: 40 + ((i * 31) % 220),
+      response,
+      tokens: estimateTokens(prompt) + estimateTokens(response),
     })
   }
+  console.log(`  kept ${records.length.toLocaleString()} prompt/response pairs`)
   return records
 }
 
@@ -151,6 +145,7 @@ async function buildIndexBytes(records) {
       { name: 'id', data: records.map(r => r.id), type: 'INT64' },
       { name: 'timestamp', data: records.map(r => r.timestamp), type: 'STRING' },
       { name: 'model', data: records.map(r => r.model), type: 'STRING' },
+      { name: 'category', data: records.map(r => r.category), type: 'STRING' },
       { name: 'prompt', data: records.map(r => r.prompt), type: 'STRING' },
       { name: 'response', data: records.map(r => r.response), type: 'STRING' },
       { name: 'tokens', data: records.map(r => r.tokens), type: 'INT32' },
@@ -190,8 +185,7 @@ async function main() {
   await dropIfExists(catalog, mainTableUrl, lister)
   await dropIfExists(catalog, indexTableUrl, lister)
 
-  const records = generateRecords(500)
-  console.log(`Generated ${records.length} LLM-log records`)
+  const records = await fetchConversations()
 
   console.log('Building parquetindex over the records...')
   const indexBytes = await buildIndexBytes(records)
