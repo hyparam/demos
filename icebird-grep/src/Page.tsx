@@ -1,9 +1,12 @@
-import HighTable, { CellContentProps } from 'hightable'
+import HighTable, { CellContentProps, sortableDataFrame } from 'hightable'
 import { DataFrame, arrayDataFrame } from 'hightable/dataframe'
 import { AsyncBuffer, FileMetaData, KeyValue, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
-import { icebergManifests, icebergMetadata, icebergRead, urlResolver } from 'icebird'
+import { parquetDataFrame } from 'hyperparam'
+import { icebergManifests, icebergMetadata } from 'icebird'
+import { translateS3Url } from 'icebird/src/fetch.js'
 import { splitManifestEntries } from 'icebird/src/manifest.js'
-import type { TableMetadata } from 'icebird/src/types.js'
+import type { ManifestList } from 'icebird/src/manifest.js'
+import type { ManifestEntry } from 'icebird/src/types.js'
 import { parquetFind } from 'parquetindex'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -16,12 +19,14 @@ const PARQUETINDEX_KV_KEYS = [
 ] as const
 
 interface LoadedTables {
-  rows: Record<string, unknown>[]
+  df: DataFrame
   columns: string[]
+  numRows: number
   sourceUrl: string
-  sourceByteLength: number
-  indexUrl: string
-  indexProperties: Record<string, string>
+  sourceFile: AsyncBuffer
+  sourceMetadata: FileMetaData
+  indexFile: AsyncBuffer
+  patchedIndexMetadata: FileMetaData
 }
 
 interface PageProps {
@@ -30,41 +35,117 @@ interface PageProps {
   setError: (e: unknown) => void
 }
 
+// Dedupe iceberg + parquet loads across React StrictMode's double-invocation
+// of effects, HMR remounts, and re-mounts due to URL changes. A whole demo
+// session typically only touches one or two tables.
+const loadCache = new Map<string, Promise<LoadedTables>>()
 const asyncBufferCache = new Map<string, Promise<AsyncBuffer>>()
-function asyncBufferFactory({ url, byteLength }: { url: string; byteLength?: number }): Promise<AsyncBuffer> {
-  let cached = asyncBufferCache.get(url)
-  if (!cached) {
-    cached = asyncBufferFromUrl({ url, byteLength }).then(cachedAsyncBuffer)
-    asyncBufferCache.set(url, cached)
+
+function getAsyncBuffer({ url, byteLength }: { url: string; byteLength?: number }): Promise<AsyncBuffer> {
+  let p = asyncBufferCache.get(url)
+  if (!p) {
+    p = asyncBufferFromUrl({ url, byteLength }).then(cachedAsyncBuffer)
+    asyncBufferCache.set(url, p)
   }
-  return cached
+  return p
 }
 
-function translateS3(url: string): string {
-  if (url.startsWith('s3://') || url.startsWith('s3a://')) {
-    const rest = url.slice(url.indexOf('://') + 3)
-    const slash = rest.indexOf('/')
-    if (slash === -1) throw new Error(`invalid S3 URL: ${url}`)
-    return `https://${rest.slice(0, slash)}.s3.amazonaws.com${rest.slice(slash)}`
-  }
-  return url
+function oneDataFile(manifests: ManifestList): ManifestEntry {
+  const { dataEntries } = splitManifestEntries(manifests)
+  if (dataEntries.length === 0) throw new Error('no data files in iceberg table')
+  if (dataEntries.length > 1) throw new Error('icebird-grep demo expects exactly one data file per table')
+  return dataEntries[0]
+}
+
+function loadTables(tableUrl: string): Promise<LoadedTables> {
+  const cached = loadCache.get(tableUrl)
+  if (cached) return cached
+  const promise = doLoadTables(tableUrl).catch((err: unknown) => {
+    loadCache.delete(tableUrl)
+    throw err
+  })
+  loadCache.set(tableUrl, promise)
+  return promise
 }
 
 /**
- * Pull the table's single data file URL from its manifests. We rely on a
- * single data file per table for this demo so the parquetindex row offsets
- * (within one parquet) line up with the iceberg row indexes.
+ * Single-pass load of the iceberg main + sibling-index tables.
+ *
+ * Each round is one Promise.all so we make exactly one batch of requests per
+ * step: 2 metadata reads, then 2 manifest reads, then 2 parquet footer reads.
+ * Without this dedupe the demo issues every step twice — once to find data
+ * file URLs and again inside `icebergRead` / `parquetFind` — and StrictMode
+ * doubles it again in dev.
  */
-async function singleDataFileUrl(metadata: TableMetadata): Promise<{ url: string; byteLength: number }> {
-  const resolver = urlResolver()
-  const manifestList = await icebergManifests({ metadata, resolver })
-  const { dataEntries } = splitManifestEntries(manifestList)
-  if (dataEntries.length === 0) throw new Error('no data files in iceberg table')
-  if (dataEntries.length > 1) throw new Error('icebird-grep demo expects exactly one data file per table')
-  const entry = dataEntries[0]
+async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
+  const indexTableUrl = tableUrl.replace(/\/+$/, '') + '.index'
+
+  const [mainMd, indexMd] = await Promise.all([
+    icebergMetadata({ tableUrl }),
+    icebergMetadata({ tableUrl: indexTableUrl }),
+  ])
+
+  const [mainManifests, indexManifests] = await Promise.all([
+    icebergManifests({ metadata: mainMd }),
+    icebergManifests({ metadata: indexMd }),
+  ])
+
+  const mainEntry = oneDataFile(mainManifests).data_file
+  const indexEntry = oneDataFile(indexManifests).data_file
+  const sourceUrl = translateS3Url(mainEntry.file_path)
+  const sourceByteLength = Number(mainEntry.file_size_in_bytes)
+  const indexDataUrl = translateS3Url(indexEntry.file_path)
+  const indexByteLength = Number(indexEntry.file_size_in_bytes)
+
+  const [sourceFile, indexFile] = await Promise.all([
+    getAsyncBuffer({ url: sourceUrl, byteLength: sourceByteLength }),
+    getAsyncBuffer({ url: indexDataUrl, byteLength: indexByteLength }),
+  ])
+  const [sourceMetadata, rawIndexMetadata] = await Promise.all([
+    parquetMetadataAsync(sourceFile),
+    parquetMetadataAsync(indexFile),
+  ])
+
+  const schema = mainMd.schemas.find(s => s['schema-id'] === mainMd['current-schema-id'])
+  if (!schema) throw new Error('iceberg current schema missing')
+  const columns = schema.fields.map(f => f.name)
+
+  // parquetDataFrame fetches rows in 1000-row chunks on demand via HTTP range
+  // requests — initial render only needs the parquet footer plus the first
+  // visible page, never the full 7-8MB source.
+  const df = sortableDataFrame(parquetDataFrame(
+    { url: sourceUrl, byteLength: sourceByteLength },
+    sourceMetadata,
+  ))
+
+  // parquetindex's kv metadata (block_size, text_columns, source_rows,
+  // source_bytelength, version) lives in the iceberg table's `properties` so
+  // the data file is a normal iceberg parquet. Splice those back into the
+  // parquet metadata so `queryIndex` can find them.
+  const props = indexMd.properties ?? {}
+  const propKv: KeyValue[] = []
+  for (const k of PARQUETINDEX_KV_KEYS) {
+    const v = props[k]
+    if (v) propKv.push({ key: k, value: v })
+  }
+  const existingKv = rawIndexMetadata.key_value_metadata ?? []
+  const patchedIndexMetadata: FileMetaData = {
+    ...rawIndexMetadata,
+    key_value_metadata: [
+      ...existingKv.filter(kv => !PARQUETINDEX_KV_KEYS.includes(kv.key as never)),
+      ...propKv,
+    ],
+  }
+
   return {
-    url: translateS3(entry.data_file.file_path),
-    byteLength: Number(entry.data_file.file_size_in_bytes),
+    df,
+    columns,
+    numRows: Number(sourceMetadata.num_rows),
+    sourceUrl,
+    sourceFile,
+    sourceMetadata,
+    indexFile,
+    patchedIndexMetadata,
   }
 }
 
@@ -75,9 +156,6 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
 
-  const indexUrl = useMemo(() => tableUrl.replace(/\/+$/, '') + '.index', [tableUrl])
-
-  // Load both iceberg tables on mount/url change.
   useEffect(() => {
     let cancelled = false
     queueMicrotask(() => {
@@ -85,37 +163,14 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
       setLoaded(undefined)
       setResults(undefined)
     })
-
-    async function load() {
-      const [mainMetadata, indexMetadata] = await Promise.all([
-        icebergMetadata({ tableUrl }),
-        icebergMetadata({ tableUrl: indexUrl }),
-      ])
-      const [source, index] = await Promise.all([
-        singleDataFileUrl(mainMetadata),
-        singleDataFileUrl(indexMetadata),
-      ])
-      const rows = await icebergRead({ tableUrl, metadata: mainMetadata })
-      const schema = mainMetadata.schemas.find(s => s['schema-id'] === mainMetadata['current-schema-id'])
-      if (!schema) throw new Error('current schema not found')
-      const columns = schema.fields.map(f => f.name)
-      if (cancelled) return
-      setLoaded({
-        rows,
-        columns,
-        sourceUrl: source.url,
-        sourceByteLength: source.byteLength,
-        indexUrl: index.url,
-        indexProperties: indexMetadata.properties ?? {},
-      })
-    }
-    load().catch((err: unknown) => { if (!cancelled) setError(err) })
+    loadTables(tableUrl)
+      .then(tables => { if (!cancelled) setLoaded(tables) })
+      .catch((err: unknown) => { if (!cancelled) setError(err) })
     return () => { cancelled = true }
-  }, [tableUrl, indexUrl, setError])
+  }, [tableUrl, setError])
 
   const isQuerying = query.trim().length > 0
 
-  // Persist the search term to the URL so deep links work.
   useEffect(() => {
     const params = new URLSearchParams(location.search)
     if (isQuerying) params.set('q', query)
@@ -123,7 +178,6 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
     history.replaceState({}, '', `${location.pathname}?${params}`)
   }, [query, isQuerying])
 
-  // Run parquetFind whenever the query or loaded tables change.
   useEffect(() => {
     if (!loaded || !isQuerying) {
       queueMicrotask(() => {
@@ -140,31 +194,17 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
       setQueryTime(undefined)
       setFirstRowTime(undefined)
       const startTime = performance.now()
-
-      // The parquetindex iceberg table stores parquetindex's required kv
-      // metadata as iceberg table properties so the bytes-on-disk look like a
-      // normal iceberg data file. Reconstruct the kv-metadata view that
-      // queryIndex expects by pulling those keys out of `properties`.
-      const indexFile = await asyncBufferFactory({ url: tables.indexUrl })
-      const indexMetadata: FileMetaData = await parquetMetadataAsync(indexFile)
-      const propKv: KeyValue[] = []
-      for (const key of PARQUETINDEX_KV_KEYS) {
-        const value = tables.indexProperties[key]
-        if (value) propKv.push({ key, value })
-      }
-      const existingKv = indexMetadata.key_value_metadata ?? []
-      const merged = [...existingKv.filter(kv => !PARQUETINDEX_KV_KEYS.includes(kv.key as never)), ...propKv]
-      const patchedIndexMetadata: FileMetaData = { ...indexMetadata, key_value_metadata: merged }
-
       const collected: Record<string, unknown>[] = []
       const rowNumbers: number[] = []
       const rowGen = parquetFind({
-        url: tables.sourceUrl,
         query,
+        url: tables.sourceUrl,
         limit: 100,
-        asyncBufferFactory,
-        indexFile,
-        indexMetadata: patchedIndexMetadata,
+        asyncBufferFactory: getAsyncBuffer,
+        sourceFile: tables.sourceFile,
+        sourceMetadata: tables.sourceMetadata,
+        indexFile: tables.indexFile,
+        indexMetadata: tables.patchedIndexMetadata,
         signal,
       })
       for await (const row of rowGen) {
@@ -172,9 +212,9 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
         if (collected.length === 0) {
           setFirstRowTime(performance.now() - startTime)
         }
-        const index = row.__index__ as number
+        const idx = row.__index__ as number
         delete row.__index__
-        rowNumbers.push(index)
+        rowNumbers.push(idx)
         collected.push(row)
       }
       setResults({ rows: collected, rowNumbers })
@@ -189,12 +229,11 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
 
   const df = useMemo<DataFrame | undefined>(() => {
     if (!loaded) return undefined
-    const columnDescriptors = loaded.columns.map(name => ({ name }))
     if (results) {
+      const columnDescriptors = loaded.columns.map(name => ({ name }))
       return arrayDataFrame(results.rows, results.rowNumbers, { columnDescriptors })
     }
-    const indices = loaded.rows.map((_, i) => i)
-    return arrayDataFrame(loaded.rows, indices, { columnDescriptors })
+    return loaded.df
   }, [loaded, results])
 
   const renderCellContent = useCallback(({ cell, stringify }: CellContentProps) => {
@@ -227,7 +266,7 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
     <div className='top-header'>
       <span className='file-name'>{tableUrl}</span>
       <div className='view-meta'>
-        {loaded && <span>{loaded.rows.length.toLocaleString()} rows</span>}
+        {loaded && <span>{loaded.numRows.toLocaleString()} rows</span>}
         {results && <span className='matches'>{results.rows.length} match{results.rows.length === 1 ? '' : 'es'}</span>}
         {queryTime !== undefined && <span>query: {queryTime.toFixed(0)} ms</span>}
         {firstRowTime !== undefined && <span>first: {firstRowTime.toFixed(0)} ms</span>}
@@ -245,7 +284,7 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
       cacheKey={tableUrl + (isQuerying ? `?${query}` : '')}
       className='hightable'
       data={df}
-      maxRowNumber={loaded?.rows.length}
+      maxRowNumber={loaded?.numRows}
       onError={setError}
       renderCellContent={renderCellContent}
     />}
