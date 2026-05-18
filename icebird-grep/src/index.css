@@ -1,0 +1,258 @@
+* {
+  box-sizing: border-box;
+  font-family: 'Mulish', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+body {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+button {
+  background-color: #111;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  outline: none;
+}
+button:active,
+button:focus,
+button:hover {
+  background-color: #333;
+}
+
+h1 {
+  font-size: 22pt;
+}
+h2 {
+  margin-top: 10px;
+  font-size: 12pt;
+}
+p {
+  margin: 15px 0;
+}
+label {
+  margin: 15px 0;
+  display: block;
+}
+code {
+  font-family: monospace;
+  background-color: #f3f0fa;
+  border-radius: 4px;
+  padding: 1px 6px;
+  white-space: pre-wrap;
+}
+
+input {
+  height: 32px;
+}
+input,
+textarea {
+  border: 2px solid #999;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: border 0.3s;
+}
+input:focus,
+textarea:focus {
+  outline: none;
+  border: 2px solid #99e;
+}
+
+nav.sidebar {
+  height: 100vh;
+  width: 48px;
+}
+nav.sidebar > div {
+  box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
+  height: 100vh;
+  position: absolute;
+  width: 48px;
+  z-index: 30;
+}
+
+.brand {
+  align-items: center;
+  color: #111;
+  display: flex;
+  filter: drop-shadow(0 0 2px #bbb);
+  font-family: 'Century Gothic', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 1.1em;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  padding: 10px 12px;
+  text-decoration: none;
+  text-orientation: mixed;
+  user-select: none;
+  writing-mode: vertical-rl;
+}
+.brand:hover {
+  color: #111;
+  filter: drop-shadow(0 0 2px #afa6b9);
+  opacity: 1;
+  text-decoration: none;
+}
+.brand::before {
+  content: '';
+  background: url(logo.svg) no-repeat 0 center;
+  background-size: 26px;
+  height: 26px;
+  width: 26px;
+  margin-bottom: 10px;
+}
+
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+#app {
+  flex: 1;
+}
+
+.content-container {
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.top-header {
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 5px;
+  padding: 6px 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.top-header .file-name {
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.view-meta {
+  align-items: center;
+  color: #666;
+  display: flex;
+  font-size: 11px;
+  font-weight: 500;
+  gap: 14px;
+  margin-left: auto;
+}
+.view-meta .matches {
+  color: #4433aa;
+  font-weight: 600;
+}
+.view-meta input {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font: 13px 'Mulish', sans-serif;
+  height: 28px;
+  padding: 2px 10px;
+  width: 240px;
+}
+.view-meta input:focus {
+  border-color: #99e;
+}
+
+#welcome {
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
+  height: 100vh;
+  padding: 10px;
+  overflow-y: auto;
+  width: 100%;
+}
+#welcome > div {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 640px;
+}
+.inputGroup {
+  display: flex;
+  gap: 10px;
+}
+.inputGroup > input {
+  flex: 1;
+}
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  margin: 10px 0;
+}
+.quick-links li {
+  display: flex;
+  flex: 1 1 calc(50% - 10px);
+  min-width: 0;
+}
+.quick-links a {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  color: #333;
+  font-family: monospace;
+  font-size: 12px;
+  overflow: hidden;
+  padding: 12px 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  transition: background-color 0.2s, border-color 0.2s;
+  text-decoration: none;
+}
+.quick-links a:hover {
+  background-color: #4433aa11;
+  border-color: #43a;
+  color: #43a;
+}
+.aws::before {
+  content: '🪣';
+  margin-right: 8px;
+}
+.badges {
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.hightable thead th {
+  padding: 2px 8px;
+}
+.hightable thead td:first-child {
+  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center center;
+  text-overflow: clip;
+}
+.hightable tbody td {
+  font-size: 12.8px;
+}
+mark {
+  background-color: #fff3a3;
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
+}

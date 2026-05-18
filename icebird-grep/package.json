@@ -1,0 +1,41 @@
+{
+  "name": "icebird-grep-demo",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run --dir test",
+    "typecheck": "tsc",
+    "create-table": "node scripts/createTable.js"
+  },
+  "dependencies": {
+    "hightable": "0.26.4",
+    "hyparquet": "1.25.6",
+    "hyperparam": "0.4.14",
+    "icebird": "0.8.3",
+    "parquetindex": "0.1.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@aws-sdk/credential-providers": "3.1048.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "eslint": "9.39.4",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.2",
+    "globals": "17.6.0",
+    "hyparquet-writer": "0.14.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.59.3",
+    "vite": "8.0.13",
+    "vitest": "4.1.6"
+  }
+}
