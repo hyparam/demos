@@ -1,15 +1,15 @@
-name: icebird-grep-demo
+name: iceberg-hypgrep-demo
 on:
   workflow_dispatch:
   push:
     branches: ["master"]
   pull_request:
     paths:
-      - 'icebird-grep/**'
+      - 'iceberg-hypgrep/**'
       - '.github/workflows/_common_jobs.yml'
-      - '.github/workflows/ci_icebird_grep_demo.yml'
+      - '.github/workflows/ci_iceberg_hypgrep_demo.yml'
 jobs:
   ci:
     uses: ./.github/workflows/_common_jobs.yml
     with:
-      workspace: icebird-grep
+      workspace: iceberg-hypgrep

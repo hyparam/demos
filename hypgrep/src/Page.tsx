@@ -1,7 +1,7 @@
 import HighTable, { CellContentProps } from 'hightable'
 import { DataFrame, arrayDataFrame } from 'hightable/dataframe'
 import { AsyncBuffer, FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
-import { parquetFind } from 'parquetindex'
+import { parquetFind } from 'hypgrep'
 import { ReactNode, useCallback, useEffect, useState } from 'react'
 
 export interface PageProps {
@@ -23,7 +23,7 @@ function asyncBufferFactory({ url, byteLength }: { url: string; byteLength?: num
 }
 
 /**
- * Parquetindex demo page
+ * Hypgrep demo page
  * Try "Vongphachanh" or "gratianopolitanus" as a search term
  *
  * @param {Object} props
@@ -57,7 +57,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       const rowNumbers = resultsDf._rowNumbers
       setQueryResultsDf(resultsDf)
       const startTime = performance.now()
-      // Query against the parquetindex
+      // Query against the hypgrep index
       const url = name
       const rowGen = parquetFind({
         url,

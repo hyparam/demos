@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// Build the icebird-grep demo tables on S3:
+// Build the iceberg-hypgrep demo tables on S3:
 //
-//   s3://hyperparam-iceberg/icebird-grep/llm_logs        - iceberg table with LLM logs
-//   s3://hyperparam-iceberg/icebird-grep/llm_logs.index  - iceberg table whose data file
-//                                                          is a parquetindex over llm_logs
+//   s3://hyperparam-iceberg/iceberg-hypgrep/llm_logs        - iceberg table with LLM logs
+//   s3://hyperparam-iceberg/iceberg-hypgrep/llm_logs.index  - iceberg table whose data file
+//                                                             is a hypgrep index over llm_logs
 //
-// The index table's iceberg schema matches the parquetindex columnar layout
-// (term, blockId, docCount, termFreq). parquetindex's required kv metadata
+// The index table's iceberg schema matches the hypgrep columnar layout
+// (term, blockId, docCount, termFreq). hypgrep's required kv metadata
 // (block_size, text_columns, source_rows, source_bytelength, version) lives in
 // the iceberg table's `properties`, so the data file ends up as a normal
 // iceberg parquet file. The demo client merges those properties back into the
@@ -28,10 +28,10 @@ import {
   s3SignedResolver,
 } from 'icebird'
 import { splitManifestEntries } from 'icebird/src/manifest.js'
-import { createIndex } from 'parquetindex'
+import { createIndex } from 'hypgrep'
 
 const BUCKET = 'hyperparam-iceberg'
-const PREFIX = 'icebird-grep'
+const PREFIX = 'iceberg-hypgrep'
 const REGION = 'us-east-1'
 
 const mainTableUrl = `s3://${BUCKET}/${PREFIX}/llm_logs`
@@ -187,23 +187,23 @@ async function main() {
 
   const records = await fetchConversations()
 
-  console.log('Building parquetindex over the records...')
+  console.log('Building hypgrep index over the records...')
   const indexBytes = await buildIndexBytes(records)
   const indexAsyncBuf = bytesAsyncBuffer(indexBytes)
   const indexMetadata = await parquetMetadataAsync(indexAsyncBuf)
   const indexRows = await parquetReadObjects({ file: indexAsyncBuf, metadata: indexMetadata })
-  console.log(`  parquetindex: ${indexBytes.length.toLocaleString()} bytes, ${indexRows.length.toLocaleString()} term-blocks`)
+  console.log(`  hypgrep index: ${indexBytes.length.toLocaleString()} bytes, ${indexRows.length.toLocaleString()} term-blocks`)
 
   const indexKv = {}
   for (const { key, value } of indexMetadata.key_value_metadata ?? []) {
-    if (key.startsWith('parquetindex.')) indexKv[key] = value
+    if (key.startsWith('hypgrep.')) indexKv[key] = value
   }
 
   console.log(`Creating + appending ${mainTableUrl}`)
   await icebergCreateTable({ catalog, tableUrl: mainTableUrl, schema: mainSchema })
   await icebergAppend({ catalog, tableUrl: mainTableUrl, records })
 
-  // Look up the data file's true size from the iceberg manifest — parquetindex
+  // Look up the data file's true size from the iceberg manifest — hypgrep
   // needs `source_bytelength` to match the actual data file on S3.
   const mainMd = await icebergMetadata({ tableUrl: mainTableUrl, resolver })
   const manifestList = await icebergManifests({ metadata: mainMd, resolver })
@@ -213,7 +213,7 @@ async function main() {
   }
   const sourceFilePath = dataEntries[0].data_file.file_path
   const sourceByteLength = Number(dataEntries[0].data_file.file_size_in_bytes)
-  indexKv['parquetindex.source_bytelength'] = String(sourceByteLength)
+  indexKv['hypgrep.source_bytelength'] = String(sourceByteLength)
   console.log(`  data file: ${sourceFilePath} (${sourceByteLength.toLocaleString()} bytes)`)
 
   console.log(`Creating + appending ${indexTableUrl}`)

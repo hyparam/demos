@@ -141,7 +141,6 @@ main {
   font-weight: 600;
   gap: 16px;
   justify-content: space-between;
-  margin: 5px;
   padding: 6px 8px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -177,63 +176,74 @@ main {
   border-color: #99e;
 }
 
-#welcome {
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(20, 20, 30, 0.55);
   display: flex;
-  flex-direction: column;
-  font-size: 18px;
-  height: 100vh;
-  padding: 10px;
-  overflow-y: auto;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: modal-fade 0.15s ease-out;
+}
+.modal {
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  max-width: 560px;
   width: 100%;
+  padding: 32px 36px;
+  position: relative;
+  font-size: 16px;
+  animation: modal-pop 0.18s ease-out;
 }
-#welcome > div {
-  display: flex;
-  flex-direction: column;
-  margin: auto;
-  max-width: 640px;
+.modal-close {
+  background: none;
+  color: #888;
+  border: none;
+  border-radius: 50%;
+  font-size: 24px;
+  line-height: 1;
+  height: 32px;
+  width: 32px;
+  padding: 0;
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
-.inputGroup {
-  display: flex;
-  gap: 10px;
-}
-.inputGroup > input {
-  flex: 1;
-}
-.quick-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  list-style: none;
-  margin: 10px 0;
-}
-.quick-links li {
-  display: flex;
-  flex: 1 1 calc(50% - 10px);
-  min-width: 0;
-}
-.quick-links a {
-  border: 1px solid #ddd;
-  border-radius: 8px;
+.modal-close:active,
+.modal-close:focus,
+.modal-close:hover {
+  background-color: #f0f0f0;
   color: #333;
-  font-family: monospace;
-  font-size: 12px;
-  overflow: hidden;
-  padding: 12px 14px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-  transition: background-color 0.2s, border-color 0.2s;
-  text-decoration: none;
 }
-.quick-links a:hover {
-  background-color: #4433aa11;
-  border-color: #43a;
-  color: #43a;
+.modal-cta {
+  margin-top: 18px;
 }
-.aws::before {
-  content: '🪣';
-  margin-right: 8px;
+@keyframes modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.about-button {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 18px;
+  font-weight: 600;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 50;
+}
+
 .badges {
   display: flex;
   gap: 10px;

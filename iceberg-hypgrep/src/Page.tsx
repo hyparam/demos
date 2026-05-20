@@ -6,16 +6,16 @@ import { translateS3Url } from 'icebird/src/fetch.js'
 import { splitManifestEntries } from 'icebird/src/manifest.js'
 import type { ManifestList } from 'icebird/src/manifest.js'
 import type { ManifestEntry } from 'icebird/src/types.js'
-import { parquetFind } from 'parquetindex'
+import { parquetFind } from 'hypgrep'
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 import { icebergDataFrame } from './icebirdAdapter.js'
 
-const PARQUETINDEX_KV_KEYS = [
-  'parquetindex.version',
-  'parquetindex.block_size',
-  'parquetindex.text_columns',
-  'parquetindex.source_rows',
-  'parquetindex.source_bytelength',
+const HYPGREP_KV_KEYS = [
+  'hypgrep.version',
+  'hypgrep.block_size',
+  'hypgrep.text_columns',
+  'hypgrep.source_rows',
+  'hypgrep.source_bytelength',
 ] as const
 
 interface LoadedTables {
@@ -50,7 +50,7 @@ function loadTables(tableUrl: string): Promise<LoadedTables> {
 function oneDataFile(manifests: ManifestList): ManifestEntry {
   const { dataEntries } = splitManifestEntries(manifests)
   if (dataEntries.length === 0) throw new Error('no data files in iceberg table')
-  if (dataEntries.length > 1) throw new Error('icebird-grep demo expects exactly one data file per table')
+  if (dataEntries.length > 1) throw new Error('iceberg-hypgrep demo expects exactly one data file per table')
   return dataEntries[0]
 }
 
@@ -83,7 +83,7 @@ async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
   ])
 
   if (dataSource.numRows === undefined) {
-    throw new Error('icebird-grep demo expects a table without row-level deletes')
+    throw new Error('iceberg-hypgrep demo expects a table without row-level deletes')
   }
 
   const mainEntry = oneDataFile(mainManifests).data_file
@@ -106,13 +106,13 @@ async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
 
   const df = sortableDataFrame(icebergDataFrame(dataSource))
 
-  // parquetindex's kv metadata (block_size, text_columns, source_rows,
+  // hypgrep's kv metadata (block_size, text_columns, source_rows,
   // source_bytelength, version) lives in the iceberg table's `properties` so
   // the data file is a normal iceberg parquet. Splice those back into the
   // parquet metadata so queryIndex can find them.
   const props = indexMd.properties ?? {}
   const propKv: KeyValue[] = []
-  for (const k of PARQUETINDEX_KV_KEYS) {
+  for (const k of HYPGREP_KV_KEYS) {
     const v = props[k]
     if (v) propKv.push({ key: k, value: v })
   }
@@ -120,7 +120,7 @@ async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
   const patchedIndexMetadata: FileMetaData = {
     ...rawIndexMetadata,
     key_value_metadata: [
-      ...existingKv.filter(kv => !PARQUETINDEX_KV_KEYS.includes(kv.key as never)),
+      ...existingKv.filter(kv => !HYPGREP_KV_KEYS.includes(kv.key as never)),
       ...propKv,
     ],
   }
@@ -156,14 +156,17 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
     return () => { cancelled = true }
   }, [tableUrl, setError])
 
-  const isQuerying = query.trim().length > 0
+  // hypgrep's tokenizer drops tokens shorter than 2 chars, so a single-letter
+  // query produces zero search terms and the index returns no matches. Fall
+  // back to showing the unfiltered table in that case.
+  const isQuerying = /[a-zA-Z0-9]{2,}/.test(query)
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
-    if (isQuerying) params.set('q', query)
+    if (query) params.set('q', query)
     else params.delete('q')
     history.replaceState({}, '', `${location.pathname}?${params}`)
-  }, [query, isQuerying])
+  }, [query])
 
   useEffect(() => {
     if (!loaded || !isQuerying) {
