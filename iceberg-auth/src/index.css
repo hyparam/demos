@@ -1,0 +1,489 @@
+body {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+button {
+  background-color: #111;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  outline: none;
+}
+button:active,
+button:focus,
+button:hover {
+  background-color: #333;
+}
+
+h1 {
+  font-size: 22pt;
+}
+h2 {
+  margin-top: 10px;
+  font-size: 12pt;
+}
+p {
+  margin: 15px 0;
+}
+label {
+  margin: 15px 0;
+  display: block;
+}
+code {
+  font-family: monospace;
+  padding: 10px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+sub {
+  align-items: center;
+  display: flex;
+  gap: 5px;
+}
+sub img {
+  cursor: pointer;
+}
+
+input {
+  height: 32px;
+}
+input,
+textarea {
+  border: 2px solid #999;
+  border-radius: 8px;
+  padding: 4px 8px;
+  transition: border 0.3s;
+}
+input:focus,
+textarea:focus {
+  outline: none;
+  border: 2px solid #99e;
+}
+
+/* sidebar */
+nav.sidebar {
+  height: 100vh;
+  width: 48px;
+  height: 100vh;
+}
+nav.sidebar > div {
+  box-shadow: 0 0 6px rgba(10, 10, 10, 0.4);
+  height: 100vh;
+  position: absolute;
+  width: 48px;
+  z-index: 30;
+}
+
+/* brand logo */
+.brand {
+  align-items: center;
+  color: #111;
+  display: flex;
+  filter: drop-shadow(0 0 2px #bbb);
+  font-family: 'Century Gothic', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 1.1em;
+  font-weight: bold;
+  letter-spacing: 0.3px;
+  opacity: 0.9;
+  padding: 10px 12px;
+  text-decoration: none;
+  text-orientation: mixed;
+  user-select: none;
+  writing-mode: vertical-rl;
+}
+.brand:hover {
+  color: #111;
+  filter: drop-shadow(0 0 2px #afa6b9);
+  opacity: 1;
+  text-decoration: none;
+}
+.brand::before {
+  content: '';
+  background: url(logo.svg) no-repeat 0 center;
+  background-size: 26px;
+  height: 26px;
+  width: 26px;
+  margin-bottom: 10px;
+}
+
+/* content area */
+main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+#app {
+  flex: 1;
+}
+
+/* content area */
+.content-container {
+  min-width: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100vh;
+  padding: 0;
+  /* no outer scrollbars */
+  overflow: hidden;
+}
+
+.top-header {
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  font-size: 14px;
+  font-weight: 600;
+  gap: 16px;
+  justify-content: space-between;
+  margin: 5px;
+  padding: 2px 8px;
+  text-decoration-thickness: 1px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viewer {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  white-space: pre-wrap;
+  overflow-y: auto;
+}
+
+/* welcome */
+#welcome {
+  display: flex;
+  flex-direction: column;
+  font-size: 20px;
+  height: 100vh;
+  padding: 10px;
+  overflow-y: auto;
+  width: 100%;
+}
+#welcome > div {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-width: 640px;
+}
+.inputGroup {
+  display: flex;
+  gap: 10px;
+}
+.inputGroup > input {
+  flex: 1;
+}
+
+/* layout */
+.layout {
+  margin: 10px;
+  max-width: 480px;
+}
+.layout,
+.layout .group,
+.layout .cell {
+  background-color: rgba(100, 80, 180, 0.05);
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 4px;
+  word-break: break-all;
+}
+.cell,
+.group-header {
+  display: flex;
+}
+.group-header > label,
+.cell > label {
+  display: flex;
+  flex: 1;
+  font-size: 12px;
+  font-weight: normal;
+  justify-content: flex-start;
+}
+.group-header > span {
+  font-size: 10px;
+}
+
+.layout div ul {
+  list-style: none;
+}
+.layout div li {
+  font-size: 10px;
+  padding: 2px 4px;
+  text-align: right;
+}
+
+.hightable thead th {
+  padding: 2px 8px;
+}
+
+.hightable thead td:first-child {
+  background: url('https://hyperparam.app/assets/table/hyparquet.svg') #f9f4ff no-repeat center center;
+  text-overflow: clip;
+}
+.hightable tbody td {
+  font-size: 12.8px;
+}
+.hightable .col-header-row {
+  align-items: center;
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+.hightable .col-header {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.hightable .col-name {
+  font-size: 12.8px;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hightable .col-type {
+  color: #888;
+  font-size: 10px;
+  font-weight: normal;
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-header .file-name {
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* sql input */
+.sql-container {
+  display: flex;
+  gap: 8px;
+}
+.sql-input-area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+.sql-input {
+  border: none;
+  border-bottom: 1px solid #ddd;
+  border-radius: 0;
+  color: #333;
+  font: 14px monospace;
+  line-height: normal;
+  letter-spacing: normal;
+  min-height: 80px;
+  padding: 8px 12px 24px 12px;
+  width: 100%;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.sql-input:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
+}
+.sql-input:focus {
+  border: none;
+  border-bottom: 2px solid #99e;
+  outline: none;
+}
+.sql-input.sql-error {
+  border-bottom-color: red;
+}
+
+.sql-error-highlight {
+  font: inherit;
+  text-decoration: underline wavy #cc3333;
+  text-decoration-skip-ink: none;
+  text-underline-offset: 2px;
+}
+
+.sql-input span {
+  font: inherit;
+}
+.sql-keyword { color: #0000ff; }
+.sql-function { color: #795e26; }
+.sql-string { color: #a31515; }
+.sql-number { color: #098658; }
+.sql-operator { color: #000000; }
+.sql-identifier { color: #001080; }
+
+.query-stats {
+  bottom: 4px;
+  color: #999;
+  display: flex;
+  font-size: 11px;
+  gap: 16px;
+  pointer-events: none;
+  position: absolute;
+  left: 12px;
+  right: 12px;
+}
+.query-stats .sql-error-msg {
+  color: #d33;
+  font: 14px monospace;
+  margin-bottom: 2px;
+}
+.query-stats .query-times {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+}
+
+/* session bar */
+.session-bar {
+  align-items: center;
+  background-color: #f7f5fc;
+  border-bottom: 1px solid #ddd;
+  color: #333;
+  display: flex;
+  font-size: 12px;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 6px 12px;
+}
+.session-bar button {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+.session-bar strong {
+  font-family: monospace;
+}
+
+.auth-error {
+  background-color: #fdecec;
+  border: 1px solid #f4baba;
+  border-radius: 6px;
+  color: #a30000;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+/* split layout: table viewer on left, LLM chat on right */
+.split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.split-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.split-side {
+  border-left: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  width: 360px;
+}
+
+/* llm panel */
+.llm-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.llm-header {
+  align-items: center;
+  background-color: #f7f5fc;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 6px 10px;
+}
+.llm-model {
+  color: #888;
+  font-family: monospace;
+  font-size: 10px;
+  font-weight: normal;
+}
+.llm-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  font-size: 13px;
+  gap: 8px;
+  overflow-y: auto;
+  padding: 10px;
+}
+.llm-empty {
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+}
+.llm-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.llm-msg .llm-role {
+  color: #888;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.llm-msg .llm-content {
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  padding: 6px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.llm-msg-user .llm-content {
+  background-color: #e6e1ff;
+}
+.llm-pending {
+  color: #888;
+  font-style: italic;
+}
+.llm-error {
+  background-color: #fdecec;
+  border-radius: 6px;
+  color: #a30000;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+.llm-form {
+  border-top: 1px solid #ddd;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+}
+.llm-form textarea {
+  flex: 1;
+  font: 13px inherit;
+  resize: none;
+}
+.llm-form button {
+  font-size: 12px;
+  padding: 6px 12px;
+}
