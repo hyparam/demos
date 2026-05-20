@@ -3,7 +3,7 @@ import Layout from './Layout.js'
 import Page from './Page.js'
 import Welcome from './Welcome.js'
 
-const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/iceberg-hypgrep/llm_logs'
+const exampleUrl = 's3://hyperparam-iceberg/iceberg-hypgrep/llm_logs'
 const welcomeDismissedCookie = 'iceberg-hypgrep-welcome-dismissed'
 
 function hasDismissedWelcome(): boolean {

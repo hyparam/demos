@@ -14,18 +14,22 @@ const HYPGREP_KV_KEYS = [
   'hypgrep.version',
   'hypgrep.block_size',
   'hypgrep.text_columns',
-  'hypgrep.source_rows',
-  'hypgrep.source_bytelength',
 ] as const
 
-interface LoadedTables {
-  df: DataFrame
-  numRows: number
+interface FilePair {
   sourceUrl: string
   sourceFile: AsyncBuffer
   sourceMetadata: FileMetaData
   indexFile: AsyncBuffer
   patchedIndexMetadata: FileMetaData
+  rowOffset: number
+  rowCount: number
+}
+
+interface LoadedTables {
+  df: DataFrame
+  numRows: number
+  pairs: FilePair[]
 }
 
 interface PageProps {
@@ -47,22 +51,23 @@ function loadTables(tableUrl: string): Promise<LoadedTables> {
   return promise
 }
 
-function oneDataFile(manifests: ManifestList): ManifestEntry {
+/** Sort dataEntries by sequence_number ascending so file i is the i'th append. */
+function orderedDataEntries(manifests: ManifestList): ManifestEntry[] {
   const { dataEntries } = splitManifestEntries(manifests)
-  if (dataEntries.length === 0) throw new Error('no data files in iceberg table')
-  if (dataEntries.length > 1) throw new Error('iceberg-hypgrep demo expects exactly one data file per table')
-  return dataEntries[0]
+  return dataEntries.slice().sort((a, b) => {
+    const sa = BigInt(a.sequence_number ?? 0)
+    const sb = BigInt(b.sequence_number ?? 0)
+    return sa < sb ? -1 : sa > sb ? 1 : 0
+  })
 }
 
 /**
- * Build the demo state. Everything routes through a single `cachingResolver`,
- * so even though the high-level icebird APIs each load metadata + manifests
- * themselves, the underlying avro/parquet bytes are fetched once and reused.
- *
- * Specifically: `icebergDataSource` internally calls `icebergManifests`, then
- * we also call `icebergManifests` to discover the data file URLs for
- * `parquetFind` — but the second call hits the resolver cache for the same
- * manifest-list + manifest avros, so it's free.
+ * Build the demo state. The main and index iceberg tables each carry N data
+ * files written in lockstep — main file i ↔ index file i (sorted by
+ * sequence_number). For each pair we synthesize the parquet kv_metadata that
+ * hypgrep's queryIndex needs: the constant fields come from the index table's
+ * `properties`, the per-file fields (source_rows, source_bytelength) come
+ * from the corresponding main-table manifest entry.
  */
 async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
   const indexTableUrl = tableUrl.replace(/\/+$/, '') + '.index'
@@ -73,9 +78,6 @@ async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
     icebergMetadata({ tableUrl: indexTableUrl, resolver }),
   ])
 
-  // Native icebird DataSource for the display. It loads manifests + delete
-  // maps once at construction (via the caching resolver) and streams rows
-  // lazily through scan().
   const [dataSource, mainManifests, indexManifests] = await Promise.all([
     icebergDataSource({ tableUrl, metadata: mainMd, resolver }),
     icebergManifests({ metadata: mainMd, resolver }),
@@ -86,53 +88,77 @@ async function doLoadTables(tableUrl: string): Promise<LoadedTables> {
     throw new Error('iceberg-hypgrep demo expects a table without row-level deletes')
   }
 
-  const mainEntry = oneDataFile(mainManifests).data_file
-  const indexEntry = oneDataFile(indexManifests).data_file
-  const sourceUrl = translateS3Url(mainEntry.file_path)
-  const sourceByteLength = Number(mainEntry.file_size_in_bytes)
-  const indexByteLength = Number(indexEntry.file_size_in_bytes)
+  const mainEntries = orderedDataEntries(mainManifests)
+  const indexEntries = orderedDataEntries(indexManifests)
+  if (mainEntries.length === 0) throw new Error('no data files in main table')
+  if (mainEntries.length !== indexEntries.length) {
+    throw new Error(`main/index data-file count mismatch: ${mainEntries.length} vs ${indexEntries.length}`)
+  }
 
-  // Resolve through the same caching resolver — the source AsyncBuffer is the
-  // exact one the data source's scan() uses, and the index buffer is shared
-  // between footer-read and parquetFind's range reads.
-  const [sourceFile, indexFile] = await Promise.all([
-    resolver.reader(mainEntry.file_path, sourceByteLength),
-    resolver.reader(indexEntry.file_path, indexByteLength),
-  ])
-  const [sourceMetadata, rawIndexMetadata] = await Promise.all([
-    parquetMetadataAsync(sourceFile),
-    parquetMetadataAsync(indexFile),
-  ])
-
-  const df = sortableDataFrame(icebergDataFrame(dataSource))
-
-  // hypgrep's kv metadata (block_size, text_columns, source_rows,
-  // source_bytelength, version) lives in the iceberg table's `properties` so
-  // the data file is a normal iceberg parquet. Splice those back into the
-  // parquet metadata so queryIndex can find them.
+  // Constant hypgrep kv from index table properties.
   const props = indexMd.properties ?? {}
-  const propKv: KeyValue[] = []
+  const constKv: KeyValue[] = []
   for (const k of HYPGREP_KV_KEYS) {
     const v = props[k]
-    if (v) propKv.push({ key: k, value: v })
+    if (v) constKv.push({ key: k, value: v })
   }
-  const existingKv = rawIndexMetadata.key_value_metadata ?? []
-  const patchedIndexMetadata: FileMetaData = {
-    ...rawIndexMetadata,
-    key_value_metadata: [
-      ...existingKv.filter(kv => !HYPGREP_KV_KEYS.includes(kv.key as never)),
-      ...propKv,
-    ],
-  }
+
+  // Build all pairs in parallel (resolver + parquet metadata fetches).
+  let rowOffset = 0
+  const pairPromises = mainEntries.map(async (mainEntry, i) => {
+    const myOffset = rowOffset
+    const rowCount = Number(mainEntry.data_file.record_count)
+    rowOffset += rowCount
+    const indexEntry = indexEntries[i]
+    const mainBytes = Number(mainEntry.data_file.file_size_in_bytes)
+    const indexBytes = Number(indexEntry.data_file.file_size_in_bytes)
+    const sourceUrl = translateS3Url(mainEntry.data_file.file_path)
+
+    const [sourceFile, indexFile] = await Promise.all([
+      resolver.reader(mainEntry.data_file.file_path, mainBytes),
+      resolver.reader(indexEntry.data_file.file_path, indexBytes),
+    ])
+    const [sourceMetadata, rawIndexMetadata] = await Promise.all([
+      parquetMetadataAsync(sourceFile),
+      parquetMetadataAsync(indexFile),
+    ])
+
+    // Per-file hypgrep kv: source_rows and source_bytelength come from the
+    // main-table manifest, not the index parquet itself.
+    const perFileKv: KeyValue[] = [
+      { key: 'hypgrep.source_rows', value: String(rowCount) },
+      { key: 'hypgrep.source_bytelength', value: String(mainBytes) },
+    ]
+    const existingKv = rawIndexMetadata.key_value_metadata ?? []
+    const allKeys = new Set([...HYPGREP_KV_KEYS, 'hypgrep.source_rows', 'hypgrep.source_bytelength'])
+    const patchedIndexMetadata: FileMetaData = {
+      ...rawIndexMetadata,
+      key_value_metadata: [
+        ...existingKv.filter(kv => !allKeys.has(kv.key)),
+        ...constKv,
+        ...perFileKv,
+      ],
+    }
+
+    const pair: FilePair = {
+      sourceUrl,
+      sourceFile,
+      sourceMetadata,
+      indexFile,
+      patchedIndexMetadata,
+      rowOffset: myOffset,
+      rowCount,
+    }
+    return pair
+  })
+  const pairs = await Promise.all(pairPromises)
+
+  const df = sortableDataFrame(icebergDataFrame(dataSource))
 
   return {
     df,
     numRows: dataSource.numRows,
-    sourceUrl,
-    sourceFile,
-    sourceMetadata,
-    indexFile,
-    patchedIndexMetadata,
+    pairs,
   }
 }
 
@@ -186,25 +212,34 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
       const startTime = performance.now()
       const collected: Record<string, unknown>[] = []
       const rowNumbers: number[] = []
-      const rowGen = parquetFind({
-        query,
-        url: tables.sourceUrl,
-        limit: 100,
-        sourceFile: tables.sourceFile,
-        sourceMetadata: tables.sourceMetadata,
-        indexFile: tables.indexFile,
-        indexMetadata: tables.patchedIndexMetadata,
-        signal,
-      })
-      for await (const row of rowGen) {
-        if (signal.aborted) return
-        if (collected.length === 0) {
-          setFirstRowTime(performance.now() - startTime)
+      const LIMIT = 100
+
+      // Search each (main, index) pair in append order — earliest snapshot
+      // first — and stop once we have LIMIT matches.
+      for (const pair of tables.pairs) {
+        signal.throwIfAborted()
+        if (collected.length >= LIMIT) break
+        const rowGen = parquetFind({
+          query,
+          url: pair.sourceUrl,
+          limit: LIMIT - collected.length,
+          sourceFile: pair.sourceFile,
+          sourceMetadata: pair.sourceMetadata,
+          indexFile: pair.indexFile,
+          indexMetadata: pair.patchedIndexMetadata,
+          signal,
+        })
+        for await (const row of rowGen) {
+          if (signal.aborted) return
+          if (collected.length === 0) {
+            setFirstRowTime(performance.now() - startTime)
+          }
+          const localIdx = row.__index__ as number
+          delete row.__index__
+          rowNumbers.push(pair.rowOffset + localIdx)
+          collected.push(row)
+          if (collected.length >= LIMIT) break
         }
-        const idx = row.__index__ as number
-        delete row.__index__
-        rowNumbers.push(idx)
-        collected.push(row)
       }
       setResults({ rows: collected, rowNumbers })
       setQueryTime(performance.now() - startTime)
