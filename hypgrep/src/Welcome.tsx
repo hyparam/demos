@@ -1,9 +1,21 @@
-import type { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 
-export default function Welcome(): ReactNode {
+interface Props {
+  onClose: () => void
+}
 
-  return <div id="welcome">
-    <div>
+export default function Welcome({ onClose }: Props): ReactNode {
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => { window.removeEventListener('keydown', onKeyDown) }
+  }, [onClose])
+
+  return <div className="modal-overlay" onClick={onClose}>
+    <div className="modal" onClick={e => { e.stopPropagation() }}>
+      <button className="modal-close" aria-label="Close" onClick={onClose}>×</button>
       <h1>hypgrep</h1>
       <h2>Full text search against cloud-stored parquet files</h2>
       <div className='badges'>
@@ -17,18 +29,7 @@ export default function Welcome(): ReactNode {
       <p>
         This demo uses <a href="https://github.com/hyparam/hightable">hightable</a> for high performance table viewing.
       </p>
-      <p>
-        Example file:
-      </p>
-      <ul className="quick-links">
-        <li>
-          <a
-            className="aws"
-            href="?key=https://s3.hyperparam.app/hypgrep/wiki_en100.parquet">
-            s3://hyperparam-public/hypgrep/wiki_en100.parquet
-          </a>
-        </li>
-      </ul>
+      <button className="modal-cta" onClick={onClose}>Explore the demo</button>
     </div>
   </div>
 }

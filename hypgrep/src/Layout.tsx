@@ -6,25 +6,16 @@ interface LayoutProps {
   className?: string
   progress?: number
   error?: Error
+  onShowAbout?: () => void
 }
 
-/**
- * Layout for shared UI.
- * Content div style can be overridden by className prop.
- *
- * @param {Object} props
- * @param {ReactNode} props.children - content to display inside the layout
- * @param {string | undefined} props.className - additional class names to apply to the content container
- * @param {number | undefined} props.progress - progress bar value
- * @param {Error} props.error - error message to display
- * @returns {ReactNode}
- */
-export default function Layout({ children, className, progress, error }: LayoutProps): ReactNode {
+export default function Layout({ children, className, progress, error, onShowAbout }: LayoutProps): ReactNode {
   return <>
     <div className='content-container'>
       <div className={cn('content', className)}>
         {children}
       </div>
+      {onShowAbout && <button className='about-button' aria-label='About' onClick={onShowAbout}>?</button>}
       <ErrorBar error={error} />
     </div>
     {progress !== undefined && progress < 1 &&
