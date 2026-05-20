@@ -37,13 +37,13 @@ jobs:
         run: |
           npm i
           npm run build
-      - name: Build parquetindex demo
-        working-directory: parquetindex
+      - name: Build hypgrep demo
+        working-directory: hypgrep
         run: |
           npm i
           npm run build
-      - name: Build icebird-grep demo
-        working-directory: icebird-grep
+      - name: Build iceberg-hypgrep demo
+        working-directory: iceberg-hypgrep
         run: |
           npm i
           npm run build
@@ -55,18 +55,18 @@ jobs:
           echo "<li><a href="./hyparquet">hyparquet demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./hightable">hightable demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./icebird">icebird demo</a></li>" >> build_outputs_folder/index.html
-          echo "<li><a href="./icebird-grep">icebird-grep demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./iceberg-hypgrep">iceberg-hypgrep demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./squirreling">squirreling demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./squirreling-gis">squirreling-gis demo</a></li>" >> build_outputs_folder/index.html
-          echo "<li><a href="./parquetindex">parquetindex demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./hypgrep">hypgrep demo</a></li>" >> build_outputs_folder/index.html
           echo "</ul>" >> build_outputs_folder/index.html
           mv hyparquet/dist build_outputs_folder/hyparquet
           mv hightable/dist build_outputs_folder/hightable
           mv icebird/dist build_outputs_folder/icebird
-          mv icebird-grep/dist build_outputs_folder/icebird-grep
+          mv iceberg-hypgrep/dist build_outputs_folder/iceberg-hypgrep
           mv squirreling/dist build_outputs_folder/squirreling
           mv squirreling-gis/dist build_outputs_folder/squirreling-gis
-          mv parquetindex/dist build_outputs_folder/parquetindex
+          mv hypgrep/dist build_outputs_folder/hypgrep
       - name: Upload static files as artifact
         id: deployment
         uses: actions/upload-pages-artifact@v3

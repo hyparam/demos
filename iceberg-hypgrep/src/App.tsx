@@ -3,13 +3,14 @@ import Layout from './Layout.js'
 import Page from './Page.js'
 import Welcome from './Welcome.js'
 
+const exampleUrl = 'https://s3.amazonaws.com/hyperparam-iceberg/iceberg-hypgrep/llm_logs'
+
 export default function App(): ReactNode {
   const params = new URLSearchParams(location.search)
-  const queryUrl = params.get('key') ?? undefined
   const initialQuery = params.get('q') ?? ''
 
   const [error, setError] = useState<Error>()
-  const [tableUrl, setTableUrl] = useState(queryUrl)
+  const [showWelcome, setShowWelcome] = useState(true)
 
   const setUnknownError = useCallback((e: unknown) => {
     if (e === undefined || e instanceof Error) {
@@ -19,16 +20,8 @@ export default function App(): ReactNode {
     }
   }, [])
 
-  const setUrlAndHistory = useCallback((url: string) => {
-    const next = new URLSearchParams(location.search)
-    next.set('key', url)
-    history.pushState({}, '', `${location.pathname}?${next}`)
-    setTableUrl(url)
-  }, [])
-
-  return <Layout error={error}>
-    {tableUrl
-      ? <Page tableUrl={tableUrl} initialQuery={initialQuery} setError={setUnknownError} />
-      : <Welcome setTableUrl={setUrlAndHistory} />}
+  return <Layout error={error} onShowAbout={() => { setShowWelcome(true) }}>
+    <Page tableUrl={exampleUrl} initialQuery={initialQuery} setError={setUnknownError} />
+    {showWelcome && <Welcome onClose={() => { setShowWelcome(false) }} />}
   </Layout>
 }
