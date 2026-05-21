@@ -47,9 +47,41 @@ const TOKEN_STORAGE_KEY = 'iceberg-auth.tokens'
 const CREDS_STORAGE_KEY = 'iceberg-auth.creds'
 const PKCE_STORAGE_KEY = 'iceberg-auth.pkce'
 
+/**
+ * postMessage protocol used when this demo is embedded in a third-party iframe
+ * (e.g. our slides deck). Cognito's Hosted UI and /logout endpoints send
+ * `X-Frame-Options: DENY`, so we can't `location.assign()` to them from inside
+ * the iframe — instead we open a popup, run the OAuth flow there, and post the
+ * resulting tokens/creds back. The opener writes them to its own (partitioned)
+ * localStorage and updates React state.
+ */
+export const POPUP_MESSAGE_TYPE = 'iceberg-auth.session'
+export const POPUP_ERROR_TYPE = 'iceberg-auth.signin-error'
+const POPUP_SIGNIN_HASH = '#popup=signin'
+const POPUP_NAME_SIGNIN = 'iceberg-auth-signin'
+
+export interface PopupSessionPayload {
+  tokens: CognitoTokens
+  credentials: AwsCredentials
+  email: string
+}
+
 interface StoredPkce {
   verifier: string
   state: string
+}
+
+function inIframe(): boolean {
+  try {
+    return window.top !== window.self
+  } catch {
+    // Cross-origin top access throws — that itself confirms we're in an iframe.
+    return true
+  }
+}
+
+function inPopup(): boolean {
+  return !!window.opener && window.opener !== window
 }
 
 /**
@@ -59,6 +91,15 @@ interface StoredPkce {
  * processes.
  */
 export async function signIn(): Promise<void> {
+  // From inside a third-party iframe, navigating to Cognito's Hosted UI is
+  // blocked by X-Frame-Options. Open a popup and let it drive the flow; it
+  // posts the session back when done. (Inside the popup itself, inIframe() is
+  // false, so this branch is not taken recursively.)
+  if (inIframe()) {
+    signInViaPopup()
+    return
+  }
+
   const verifier = randomVerifier()
   const state = randomVerifier().slice(0, 32)
   const challenge = await challengeFromVerifier(verifier)
@@ -76,19 +117,78 @@ export async function signIn(): Promise<void> {
   location.assign(`${config.domain}/oauth2/authorize?${params.toString()}`)
 }
 
+function signInViaPopup(): void {
+  const url = `${redirectUri()}${POPUP_SIGNIN_HASH}`
+  const popup = window.open(url, POPUP_NAME_SIGNIN, 'popup=true,width=520,height=720')
+  if (!popup) throw new Error('Popup blocked — allow popups for this site to sign in.')
+}
+
 /**
  * Hosted-UI logout. Cognito's `/logout` endpoint clears its session cookie and
  * redirects back to one of the registered logout URIs.
+ *
+ * In an iframe we can't navigate to /logout (X-Frame-Options blocks it), so we
+ * just drop local tokens/creds. Cognito's session cookie persists, which is
+ * fine for a demo — the next sign-in popup skips the password prompt. The
+ * caller is responsible for resetting React state in that case.
  */
 export function signOutRedirect(): void {
   localStorage.removeItem(TOKEN_STORAGE_KEY)
   localStorage.removeItem(CREDS_STORAGE_KEY)
+  if (inIframe()) return
   const params = new URLSearchParams({
     client_id: config.clientId,
     logout_uri: redirectUri(),
   })
   location.assign(`${config.domain}/logout?${params.toString()}`)
 }
+
+/**
+ * Persist tokens and credentials handed to us by a sign-in popup. Used by the
+ * iframe-mode receiver in App.tsx — its localStorage is partitioned away from
+ * the popup's, so the popup can't write tokens that the iframe will see.
+ */
+export function importSession(session: PopupSessionPayload): void {
+  saveTokens(session.tokens)
+  saveCredentials(session.credentials)
+}
+
+/**
+ * If the current page is a popup that finished the OAuth exchange, hand the
+ * session back to the opener (the iframe) and close. No-op when not a popup.
+ */
+export function postSessionToOpenerAndClose(session: Session): void {
+  if (!inPopup()) return
+  const payload: PopupSessionPayload = {
+    tokens: session.tokens,
+    credentials: session.credentials,
+    email: session.email,
+  }
+  const opener = window.opener as Window | null
+  try {
+    opener?.postMessage({ type: POPUP_MESSAGE_TYPE, session: payload }, location.origin)
+  } catch (err) {
+    console.warn('postMessage to opener failed', err)
+  }
+  window.close()
+}
+
+/**
+ * Mirror of postSessionToOpenerAndClose for the error path.
+ */
+export function postErrorToOpenerAndClose(error: unknown): void {
+  if (!inPopup()) return
+  const message = error instanceof Error ? error.message : String(error)
+  const opener = window.opener as Window | null
+  try {
+    opener?.postMessage({ type: POPUP_ERROR_TYPE, error: message }, location.origin)
+  } catch (err) {
+    console.warn('postMessage to opener failed', err)
+  }
+  window.close()
+}
+
+export { POPUP_SIGNIN_HASH }
 
 /**
  * If the current URL contains an OAuth `code` (from a hosted-UI redirect),
@@ -127,6 +227,11 @@ async function doHandleRedirectCallback(): Promise<Session | undefined> {
   url.searchParams.delete('code')
   url.searchParams.delete('state')
   history.replaceState({}, '', url.toString())
+
+  // If we ran this exchange inside an iframe-spawned popup, hand the session
+  // back to the iframe and close — its localStorage is partitioned away from
+  // ours so it can't read what we just saved.
+  postSessionToOpenerAndClose(session)
 
   return session
 }
