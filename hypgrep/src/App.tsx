@@ -7,15 +7,14 @@ import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
 
 const exampleUrl = 'https://s3.hyperparam.app/hypgrep/wiki_en100.parquet'
-const welcomeDismissedCookie = 'hypgrep-welcome-dismissed'
+const welcomeDismissedKey = 'hypgrep-welcome-dismissed'
 
 function hasDismissedWelcome(): boolean {
-  return document.cookie.split('; ').some(c => c.startsWith(`${welcomeDismissedCookie}=`))
+  return localStorage.getItem(welcomeDismissedKey) === '1'
 }
 
 function setWelcomeDismissed(): void {
-  const oneYear = 60 * 60 * 24 * 365
-  document.cookie = `${welcomeDismissedCookie}=1; max-age=${oneYear}; path=/; SameSite=Lax`
+  localStorage.setItem(welcomeDismissedKey, '1')
 }
 
 export default function App(): ReactNode {
