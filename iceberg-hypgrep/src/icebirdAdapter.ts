@@ -58,17 +58,24 @@ export function icebergDataFrame(source: AsyncDataSource): DataFrame {
       await discoverUpTo(rowEnd - 1, signal)
       const end = Math.min(rowEnd, asyncRows.length)
       const cols = columns ?? columnDescriptors.map(c => c.name)
+      // Resolve cells in parallel and dispatch `resolve` per cell so HighTable
+      // can re-render incrementally instead of waiting for the whole window.
+      const promises: Promise<void>[] = []
       for (let row = rowStart; row < end; row++) {
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
         const { cells } = asyncRows[row]
         for (const col of cols) {
           const key = `${row}:${col}`
-          if (!resolvedCells.has(key)) {
+          if (resolvedCells.has(key)) continue
+          promises.push((async () => {
             resolvedCells.set(key, await cells[col]())
-          }
+            if (!signal?.aborted) {
+              eventTarget.dispatchEvent(new CustomEvent('resolve'))
+            }
+          })())
         }
       }
-      eventTarget.dispatchEvent(new CustomEvent('resolve'))
+      await Promise.all(promises)
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     },
   }
 }

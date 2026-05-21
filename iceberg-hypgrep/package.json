@@ -17,7 +17,7 @@
     "hightable": "0.26.4",
     "hyparquet": "1.25.8",
     "hyperparam": "0.4.14",
-    "icebird": "0.8.3",
+    "icebird": "0.8.4",
     "hypgrep": "0.1.1",
     "react": "19.2.6",
     "react-dom": "19.2.6"
@@ -36,6 +36,6 @@
     "typescript": "6.0.3",
     "typescript-eslint": "8.59.4",
     "vite": "8.0.13",
-    "vitest": "4.1.6"
+    "vitest": "4.1.7"
   }
 }

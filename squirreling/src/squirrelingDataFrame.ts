@@ -105,22 +105,31 @@ export function squirrelingDataFrame({
       const end = Math.min(rowEnd, asyncRows.length)
       const cols = columns ?? columnDescriptors.map(c => c.name)
 
+      // Resolve all cells in parallel so fast columns land immediately while
+      // slow columns (e.g. LLM UDFs) stream in as they complete. Dispatching
+      // `resolve` per cell lets HighTable re-render incrementally instead of
+      // waiting for the whole fetch.
+      const promises: Promise<void>[] = []
       for (let row = rowStart; row < end; row++) {
-        if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
         const { cells } = asyncRows[row]
         for (const col of cols) {
           const key = `${row}:${col}`
-          if (!resolvedCells.has(key)) {
+          if (resolvedCells.has(key)) continue
+          promises.push((async () => {
             try {
               resolvedCells.set(key, await cells[col]())
             } catch (err) {
               console.error(`Error fetching cell ${col} in row ${row}:`, err, cells, columns)
               resolvedCells.set(key, new Error(String(err)))
             }
-          }
+            if (!signal?.aborted) {
+              eventTarget.dispatchEvent(new CustomEvent('resolve'))
+            }
+          })())
         }
       }
-      eventTarget.dispatchEvent(new CustomEvent('resolve'))
+      await Promise.all(promises)
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError')
     },
   }
 }
