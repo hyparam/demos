@@ -286,11 +286,14 @@ export default function Page({ tableUrl, initialQuery, setError }: PageProps): R
     </>
   }, [isQuerying, query])
 
+  const isSearching = isQuerying && loaded !== undefined && queryTime === undefined
+
   return <>
     <div className='top-header'>
       <span className='file-name'>{tableUrl}</span>
+      {loaded && <span className='row-count'>{loaded.numRows.toLocaleString()} rows</span>}
       <div className='view-meta'>
-        {loaded && <span>{loaded.numRows.toLocaleString()} rows</span>}
+        {isSearching && <span className='spinner' role='status' aria-label='Searching' />}
         {results && <span className='matches'>{results.rows.length} match{results.rows.length === 1 ? '' : 'es'}</span>}
         {queryTime !== undefined && <span>query: {queryTime.toFixed(0)} ms</span>}
         {firstRowTime !== undefined && <span>first: {firstRowTime.toFixed(0)} ms</span>}

@@ -3,6 +3,7 @@ import { icebergDataSource, icebergMetadata, s3SignedResolver } from 'icebird'
 import type { Resolver } from 'icebird/src/types.js'
 import type { IcebergType, TableMetadata } from 'icebird/src/types.js'
 import { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { sortableDataFrame } from 'hightable/dataframe'
 import { AsyncDataSource, executeSql, extractTables, parseSql } from 'squirreling'
 import type { AwsCredentials } from './auth/cognito.js'
 import { config } from './auth/config.js'
@@ -218,7 +219,7 @@ export default function Page({
         query: stmt,
         sourceColumns,
       })
-      setQueryDf(resultsDf)
+      setQueryDf(sortableDataFrame(resultsDf))
     }
 
     run().catch((err: unknown) => {

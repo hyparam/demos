@@ -151,6 +151,12 @@ main {
   text-overflow: ellipsis;
   min-width: 0;
 }
+.top-header .row-count {
+  color: #666;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
 .view-meta {
   align-items: center;
   color: #666;
@@ -163,6 +169,17 @@ main {
 .view-meta .matches {
   color: #4433aa;
   font-weight: 600;
+}
+.view-meta .spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ddd;
+  border-top-color: #4433aa;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 .view-meta input {
   border: 1px solid #ccc;
