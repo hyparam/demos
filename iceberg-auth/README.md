@@ -2,7 +2,7 @@
 
 Browser-only demo that combines:
 
-- **Cognito OAuth** (hosted UI + PKCE) gating access to a single whitelisted user
+- **Cognito User Pool** (email + password via `InitiateAuth`) gating access to a single whitelisted user
 - **Cognito Identity Pool** issuing temporary AWS credentials to the browser
 - **Icebird** reading an Apache Iceberg table from a **private S3 bucket** via SigV4
 - **Bedrock InvokeModel** called directly from the browser using the same creds
@@ -33,12 +33,10 @@ You provision these once, out of band:
 - Create the one whitelisted user (`kenny@hyperparam.app`) — either by inviting
   them or by federating a corporate IdP and restricting allowed emails.
 - Under **App integration**:
-  - Set a hosted-UI **Domain prefix** → this becomes `VITE_COGNITO_DOMAIN`.
   - Create a **public app client** (no client secret).
-  - Enable **Authorization code grant** + scopes `openid`, `email`, `profile`.
-  - Add the deployed app URL (e.g. `https://hyparam.github.io/demos/iceberg-auth/`)
-    and `http://localhost:5173/` to both **Allowed callback URLs** and
-    **Allowed sign-out URLs**.
+  - Under **Auth flows**, enable **ALLOW_USER_PASSWORD_AUTH** and
+    **ALLOW_REFRESH_TOKEN_AUTH**. (No Hosted UI / OAuth callback URLs needed —
+    the SPA calls `InitiateAuth` directly.)
 
 ### 2. Cognito Identity Pool
 
@@ -132,16 +130,23 @@ origin, so no proxy is needed.
 
 ## How auth flows
 
-1. Click **Sign in** → PKCE redirect to `<domain>/oauth2/authorize`.
-2. After login, Cognito redirects back to this app with `?code=...&state=...`.
-3. The SPA POSTs the code to `<domain>/oauth2/token`, receives id/access/refresh.
-4. The id token is exchanged for AWS creds via Cognito Identity:
+1. Type email + password into the in-page form → POST to
+   `cognito-idp.<region>.amazonaws.com/` with target
+   `AWSCognitoIdentityProviderService.InitiateAuth` and flow `USER_PASSWORD_AUTH`.
+2. Cognito responds with `{ IdToken, AccessToken, RefreshToken }`.
+3. The id token is exchanged for AWS creds via Cognito Identity:
    - `GetId` → `IdentityId`
    - `GetCredentialsForIdentity` → `{ AccessKeyId, SecretKey, SessionToken, Expiration }`
-5. The creds are cached in `localStorage` and used to:
+4. The creds are cached in `localStorage` and used to:
    - Sign every S3 read (icebird's `s3SignedResolver`)
    - Sign every Bedrock `InvokeModel` POST
-6. The app refreshes creds in the background before they expire.
+5. The app refreshes creds in the background before they expire (uses
+   `REFRESH_TOKEN_AUTH` when the idToken itself has expired).
 
-The whitelisted-email check in `App.tsx` is a UX nicety only — real enforcement
-is the User Pool only having one user, and the IAM role trust policy.
+The password is sent to Cognito over HTTPS in plaintext — that's what
+`USER_PASSWORD_AUTH` does. For higher-security setups use `USER_SRP_AUTH` or
+the Hosted UI instead.
+
+The whitelisted-email check in `SignIn.tsx` is a UX nicety only — real
+enforcement is the User Pool only having one user, and the IAM role trust
+policy.

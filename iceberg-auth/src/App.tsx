@@ -1,15 +1,7 @@
 import { ReactNode, useCallback, useEffect, useState } from 'react'
 import { config } from './auth/config.js'
-import type { PopupSessionPayload, Session } from './auth/cognito.js'
-import {
-  POPUP_ERROR_TYPE,
-  POPUP_MESSAGE_TYPE,
-  handleRedirectCallback,
-  importSession,
-  postErrorToOpenerAndClose,
-  restoreSession,
-  signOutRedirect,
-} from './auth/cognito.js'
+import type { Session } from './auth/cognito.js'
+import { restoreSession, signOut } from './auth/cognito.js'
 import Layout from './Layout.js'
 import LlmPanel from './LlmPanel.js'
 import Page from './Page.js'
@@ -18,19 +10,17 @@ import SignIn from './SignIn.js'
 /**
  * Top-level state machine:
  *
- *   loading → (no creds)         → SignIn
- *           → (?code= in URL)    → exchange + show Page
- *           → (stored session)   → show Page
+ *   loading → (no stored session) → SignIn (email/password form)
+ *           → (stored session)     → show Page
  *
- * Sign-out blows away local tokens/creds and hands control back to Cognito's
- * `/logout`, which clears its own session cookie before bouncing the user back
- * to the SignIn screen.
+ * Sign-in goes directly to Cognito's `InitiateAuth` API — no Hosted UI, no
+ * redirect — and the resulting Session is handed up via `onSession`.
+ * Sign-out is a local clear of tokens/creds.
  */
 export default function App(): ReactNode {
   const [session, setSession] = useState<Session>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error>()
-  const [authError, setAuthError] = useState<string>()
 
   const setUnknownError = useCallback((e: unknown) => {
     if (e === undefined || e instanceof Error) {
@@ -40,67 +30,22 @@ export default function App(): ReactNode {
     }
   }, [])
 
-  // In iframe mode signOutRedirect just clears storage (it can't navigate to
-  // Cognito /logout) — so we have to reset state too. In top mode the
-  // setSession is harmless: the page is about to unload.
   const onSignOut = useCallback(() => {
-    signOutRedirect()
+    signOut()
     setSession(undefined)
   }, [])
 
-  // On first mount: drain any OAuth callback params, then try to restore.
+  // On first mount: try to restore a saved session.
   useEffect(() => {
     const ctl = new AbortController()
-    handleRedirectCallback()
-      .then(fresh => {
-        if (ctl.signal.aborted) return undefined
-        if (fresh) {
-          if (fresh.email.toLowerCase() !== config.allowedEmail.toLowerCase()) {
-            setAuthError(`Account ${fresh.email} is not whitelisted for this demo.`)
-            return undefined
-          }
-          setSession(fresh)
-          return undefined
-        }
-        return restoreSession()
-      })
+    restoreSession()
       .then(restored => {
         if (ctl.signal.aborted || !restored) return
         setSession(restored)
       })
-      .catch((e: unknown) => {
-        if (ctl.signal.aborted) return
-        // If we're a popup that hit an error after the Cognito redirect, hand
-        // the error back to the opener (the iframe) and close ourselves.
-        postErrorToOpenerAndClose(e)
-        setAuthError(e instanceof Error ? e.message : String(e))
-      })
+      .catch((e: unknown) => { console.warn('restore failed', e) })
       .finally(() => { if (!ctl.signal.aborted) setLoading(false) })
     return () => { ctl.abort() }
-  }, [])
-
-  // Iframe-mode receiver: when the sign-in popup completes the OAuth exchange
-  // it posts the tokens/credentials back here. Our localStorage is partitioned
-  // away from the popup's, so we have to persist them ourselves.
-  useEffect(() => {
-    function onMessage(e: MessageEvent<{ type?: string; session?: PopupSessionPayload; error?: string }>) {
-      if (e.origin !== location.origin) return
-      const { data } = e
-      if (data.type === POPUP_MESSAGE_TYPE && data.session) {
-        const { tokens, credentials, email } = data.session
-        if (email.toLowerCase() !== config.allowedEmail.toLowerCase()) {
-          setAuthError(`Account ${email} is not whitelisted for this demo.`)
-          return
-        }
-        importSession(data.session)
-        setSession({ tokens, credentials, email })
-        setAuthError(undefined)
-      } else if (data.type === POPUP_ERROR_TYPE && data.error) {
-        setAuthError(data.error)
-      }
-    }
-    window.addEventListener('message', onMessage)
-    return () => { window.removeEventListener('message', onMessage) }
   }, [])
 
   // Re-check credential expiry every minute; refresh via restoreSession,
@@ -137,7 +82,7 @@ export default function App(): ReactNode {
   }
 
   if (!session) {
-    return <Layout><SignIn error={authError} /></Layout>
+    return <Layout><SignIn onSession={setSession} /></Layout>
   }
 
   return <Layout error={error}>

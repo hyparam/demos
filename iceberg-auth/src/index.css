@@ -186,6 +186,19 @@ main {
 .inputGroup > input {
   flex: 1;
 }
+.signin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  max-width: 320px;
+}
+.signin-form > input {
+  font-size: 16px;
+}
+.signin-form > button {
+  align-self: flex-start;
+}
 
 /* layout */
 .layout {

@@ -1,15 +1,35 @@
-import { ReactNode, useCallback } from 'react'
-import { signIn } from './auth/cognito.js'
+import { ReactNode, SyntheticEvent, useCallback, useState } from 'react'
+import type { Session } from './auth/cognito.js'
+import { signInWithPassword } from './auth/cognito.js'
 import { config } from './auth/config.js'
 
 interface Props {
-  error?: string
+  onSession: (s: Session) => void
 }
 
-export default function SignIn({ error }: Props): ReactNode {
-  const onClick = useCallback(() => {
-    signIn().catch((err: unknown) => { console.error(err) })
-  }, [])
+export default function SignIn({ onSession }: Props): ReactNode {
+  const [email, setEmail] = useState(config.allowedEmail)
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
+
+  const onSubmit = useCallback((e: SyntheticEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setBusy(true)
+    setError(undefined)
+    signInWithPassword(email.trim(), password)
+      .then(session => {
+        if (session.email.toLowerCase() !== config.allowedEmail.toLowerCase()) {
+          setError(`Account ${session.email} is not whitelisted for this demo.`)
+          return
+        }
+        onSession(session)
+      })
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : String(err))
+      })
+      .finally(() => { setBusy(false) })
+  }, [email, password, onSession])
 
   return <div id="welcome">
     <div>
@@ -24,9 +44,27 @@ export default function SignIn({ error }: Props): ReactNode {
         Only <code>{config.allowedEmail}</code> is permitted to sign in. The check is enforced
         by the Cognito User Pool and the IAM role attached to the Identity Pool.
       </p>
-      <div className='inputGroup'>
-        <button onClick={onClick}>Sign in with Cognito</button>
-      </div>
+      <form className='signin-form' onSubmit={onSubmit}>
+        <input
+          type='email'
+          value={email}
+          onChange={e => { setEmail(e.target.value) }}
+          placeholder='email'
+          autoComplete='username'
+          required
+        />
+        <input
+          type='password'
+          value={password}
+          onChange={e => { setPassword(e.target.value) }}
+          placeholder='password'
+          autoComplete='current-password'
+          required
+        />
+        <button type='submit' disabled={busy || !password}>
+          {busy ? 'Signing in…' : 'Sign in'}
+        </button>
+      </form>
       {error && <p className='auth-error'>{error}</p>}
     </div>
   </div>

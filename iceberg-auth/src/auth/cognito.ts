@@ -1,17 +1,18 @@
-import { config, redirectUri } from './config.js'
-import { challengeFromVerifier, randomVerifier } from './pkce.js'
+import { config } from './config.js'
 
 /**
- * Cognito hosted-UI OAuth (authorization code + PKCE) and Identity Pool
- * credential exchange. No AWS SDK — just the two REST endpoints we need:
+ * Cognito User Pool sign-in via the `InitiateAuth` API (USER_PASSWORD_AUTH
+ * flow), plus the Identity Pool credential exchange. No AWS SDK and no Hosted
+ * UI — three REST endpoints:
  *
- *   POST <domain>/oauth2/token            → idToken/accessToken/refreshToken
- *   POST cognito-identity.<region>.../    → AWS access key + session token
+ *   POST cognito-idp.<region>.../   AWSCognitoIdentityProviderService.InitiateAuth
+ *     → idToken / accessToken / refreshToken (USER_PASSWORD_AUTH)
+ *     → idToken / accessToken             (REFRESH_TOKEN_AUTH)
+ *   POST cognito-identity.<region>.../    → IdentityId, then AWS creds
  *
- * `signIn()` redirects to the hosted UI; the redirect target is the same SPA
- * URL with `?code=...&state=...`. `handleRedirectCallback()` consumes those
- * params on next load and resolves to a `Session`. Tokens and AWS credentials
- * are cached in localStorage and refreshed automatically before expiry.
+ * The User Pool app client must have `ALLOW_USER_PASSWORD_AUTH` enabled.
+ * Tokens and AWS credentials are cached in localStorage and refreshed before
+ * expiry.
  */
 
 export interface AwsCredentials {
@@ -45,201 +46,29 @@ export interface Session {
 
 const TOKEN_STORAGE_KEY = 'iceberg-auth.tokens'
 const CREDS_STORAGE_KEY = 'iceberg-auth.creds'
-const PKCE_STORAGE_KEY = 'iceberg-auth.pkce'
 
-/**
- * postMessage protocol used when this demo is embedded in a third-party iframe
- * (e.g. our slides deck). Cognito's Hosted UI and /logout endpoints send
- * `X-Frame-Options: DENY`, so we can't `location.assign()` to them from inside
- * the iframe — instead we open a popup, run the OAuth flow there, and post the
- * resulting tokens/creds back. The opener writes them to its own (partitioned)
- * localStorage and updates React state.
- */
-export const POPUP_MESSAGE_TYPE = 'iceberg-auth.session'
-export const POPUP_ERROR_TYPE = 'iceberg-auth.signin-error'
-const POPUP_SIGNIN_HASH = '#popup=signin'
-const POPUP_NAME_SIGNIN = 'iceberg-auth-signin'
+const IDP_ENDPOINT = `https://cognito-idp.${config.region}.amazonaws.com/`
 
-export interface PopupSessionPayload {
-  tokens: CognitoTokens
-  credentials: AwsCredentials
-  email: string
-}
-
-interface StoredPkce {
-  verifier: string
-  state: string
-}
-
-function inIframe(): boolean {
-  try {
-    return window.top !== window.self
-  } catch {
-    // Cross-origin top access throws — that itself confirms we're in an iframe.
-    return true
-  }
-}
-
-function inPopup(): boolean {
-  return !!window.opener && window.opener !== window
+interface CognitoError {
+  __type?: string
+  message?: string
 }
 
 /**
- * Begin the OAuth flow: stash a fresh PKCE verifier + random state in
- * sessionStorage and navigate to the hosted UI. The browser comes back to
- * `redirectUri()` with `?code=...&state=...`, which `handleRedirectCallback`
- * processes.
+ * Sign in with email/password against Cognito's User Pool directly. Returns a
+ * full Session (tokens + temporary AWS creds + email). The User Pool app
+ * client must have ALLOW_USER_PASSWORD_AUTH enabled.
  */
-export async function signIn(): Promise<void> {
-  // From inside a third-party iframe, navigating to Cognito's Hosted UI is
-  // blocked by X-Frame-Options. Open a popup and let it drive the flow; it
-  // posts the session back when done. (Inside the popup itself, inIframe() is
-  // false, so this branch is not taken recursively.)
-  if (inIframe()) {
-    signInViaPopup()
-    return
-  }
-
-  const verifier = randomVerifier()
-  const state = randomVerifier().slice(0, 32)
-  const challenge = await challengeFromVerifier(verifier)
-  sessionStorage.setItem(PKCE_STORAGE_KEY, JSON.stringify({ verifier, state } satisfies StoredPkce))
-
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    response_type: 'code',
-    scope: 'openid email profile',
-    redirect_uri: redirectUri(),
-    state,
-    code_challenge: challenge,
-    code_challenge_method: 'S256',
-  })
-  location.assign(`${config.domain}/oauth2/authorize?${params.toString()}`)
-}
-
-function signInViaPopup(): void {
-  const url = `${redirectUri()}${POPUP_SIGNIN_HASH}`
-  const popup = window.open(url, POPUP_NAME_SIGNIN, 'popup=true,width=520,height=720')
-  if (!popup) throw new Error('Popup blocked — allow popups for this site to sign in.')
-}
-
-/**
- * Hosted-UI logout. Cognito's `/logout` endpoint clears its session cookie and
- * redirects back to one of the registered logout URIs.
- *
- * In an iframe we can't navigate to /logout (X-Frame-Options blocks it), so we
- * just drop local tokens/creds. Cognito's session cookie persists, which is
- * fine for a demo — the next sign-in popup skips the password prompt. The
- * caller is responsible for resetting React state in that case.
- */
-export function signOutRedirect(): void {
-  localStorage.removeItem(TOKEN_STORAGE_KEY)
-  localStorage.removeItem(CREDS_STORAGE_KEY)
-  if (inIframe()) return
-  const params = new URLSearchParams({
-    client_id: config.clientId,
-    logout_uri: redirectUri(),
-  })
-  location.assign(`${config.domain}/logout?${params.toString()}`)
-}
-
-/**
- * Persist tokens and credentials handed to us by a sign-in popup. Used by the
- * iframe-mode receiver in App.tsx — its localStorage is partitioned away from
- * the popup's, so the popup can't write tokens that the iframe will see.
- */
-export function importSession(session: PopupSessionPayload): void {
-  saveTokens(session.tokens)
-  saveCredentials(session.credentials)
-}
-
-/**
- * If the current page is a popup that finished the OAuth exchange, hand the
- * session back to the opener (the iframe) and close. No-op when not a popup.
- */
-export function postSessionToOpenerAndClose(session: Session): void {
-  if (!inPopup()) return
-  const payload: PopupSessionPayload = {
-    tokens: session.tokens,
-    credentials: session.credentials,
-    email: session.email,
-  }
-  const opener = window.opener as Window | null
-  try {
-    opener?.postMessage({ type: POPUP_MESSAGE_TYPE, session: payload }, location.origin)
-  } catch (err) {
-    console.warn('postMessage to opener failed', err)
-  }
-  window.close()
-}
-
-/**
- * Mirror of postSessionToOpenerAndClose for the error path.
- */
-export function postErrorToOpenerAndClose(error: unknown): void {
-  if (!inPopup()) return
-  const message = error instanceof Error ? error.message : String(error)
-  const opener = window.opener as Window | null
-  try {
-    opener?.postMessage({ type: POPUP_ERROR_TYPE, error: message }, location.origin)
-  } catch (err) {
-    console.warn('postMessage to opener failed', err)
-  }
-  window.close()
-}
-
-export { POPUP_SIGNIN_HASH }
-
-/**
- * If the current URL contains an OAuth `code` (from a hosted-UI redirect),
- * exchange it for tokens and AWS credentials, then strip the query string so
- * a reload doesn't try to re-redeem the now-spent code. Returns the resulting
- * Session, or undefined if there was no code.
- *
- * Memoized so that concurrent callers (e.g. React StrictMode double-invoking
- * the mount effect in dev) share one in-flight exchange — otherwise the second
- * call finds the PKCE verifier already consumed and throws.
- */
-let redirectCallbackPromise: Promise<Session | undefined> | undefined
-export function handleRedirectCallback(): Promise<Session | undefined> {
-  redirectCallbackPromise ??= doHandleRedirectCallback()
-  return redirectCallbackPromise
-}
-
-async function doHandleRedirectCallback(): Promise<Session | undefined> {
-  const params = new URLSearchParams(location.search)
-  const code = params.get('code')
-  const state = params.get('state')
-  if (!code) return undefined
-
-  const raw = sessionStorage.getItem(PKCE_STORAGE_KEY)
-  if (!raw) throw new Error('Missing PKCE verifier; restart sign in')
-  const stored = JSON.parse(raw) as StoredPkce
-  if (state !== stored.state) throw new Error('OAuth state mismatch')
-  sessionStorage.removeItem(PKCE_STORAGE_KEY)
-
-  const tokens = await exchangeCodeForTokens(code, stored.verifier)
+export async function signInWithPassword(email: string, password: string): Promise<Session> {
+  const tokens = await initiateAuth(email, password)
   saveTokens(tokens)
-  const session = await buildSessionFromTokens(tokens)
-
-  // Strip the OAuth params from the URL so a reload doesn't re-redeem the code.
-  const url = new URL(location.href)
-  url.searchParams.delete('code')
-  url.searchParams.delete('state')
-  history.replaceState({}, '', url.toString())
-
-  // If we ran this exchange inside an iframe-spawned popup, hand the session
-  // back to the iframe and close — its localStorage is partitioned away from
-  // ours so it can't read what we just saved.
-  postSessionToOpenerAndClose(session)
-
-  return session
+  return await buildSessionFromTokens(tokens)
 }
 
 /**
- * Restore a previous session from localStorage if both tokens and credentials
- * are present and not expired. Auto-refreshes credentials when only those have
- * expired (cheap call), and the full token+creds chain when the idToken has.
+ * Restore a previous session from localStorage if tokens are present and live.
+ * Auto-refreshes credentials if only those have expired (cheap), and the full
+ * token+creds chain when the idToken has.
  */
 export async function restoreSession(): Promise<Session | undefined> {
   const tokens = loadTokens()
@@ -256,6 +85,14 @@ export async function restoreSession(): Promise<Session | undefined> {
     }
   }
   return await buildSessionFromTokens(liveTokens)
+}
+
+/**
+ * Sign-out. There is no server-side session to invalidate — the User Pool
+ * tokens just expire on their own — so this is a local-state clear.
+ */
+export function signOut(): void {
+  clearSession()
 }
 
 export function clearSession(): void {
@@ -277,57 +114,70 @@ async function buildSessionFromTokens(tokens: CognitoTokens): Promise<Session> {
   return { tokens, credentials, email }
 }
 
-async function exchangeCodeForTokens(code: string, verifier: string): Promise<CognitoTokens> {
-  const body = new URLSearchParams({
-    grant_type: 'authorization_code',
-    client_id: config.clientId,
-    code,
-    redirect_uri: redirectUri(),
-    code_verifier: verifier,
+interface AuthenticationResult {
+  IdToken: string
+  AccessToken: string
+  RefreshToken?: string
+  ExpiresIn: number
+}
+
+async function initiateAuth(email: string, password: string): Promise<CognitoTokens> {
+  const json = await postIdp<{
+    AuthenticationResult?: AuthenticationResult
+    ChallengeName?: string
+  }>('AWSCognitoIdentityProviderService.InitiateAuth', {
+    AuthFlow: 'USER_PASSWORD_AUTH',
+    ClientId: config.clientId,
+    AuthParameters: { USERNAME: email, PASSWORD: password },
   })
-  const res = await fetch(`${config.domain}/oauth2/token`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  })
-  if (!res.ok) throw new Error(`Token exchange failed: ${res.status} ${await res.text()}`)
-  const json = await res.json() as {
-    id_token: string
-    access_token: string
-    refresh_token?: string
-    expires_in: number
+  if (!json.AuthenticationResult) {
+    throw new Error(`Unsupported auth challenge: ${json.ChallengeName ?? 'unknown'}`)
   }
-  return {
-    idToken: json.id_token,
-    accessToken: json.access_token,
-    refreshToken: json.refresh_token,
-    expiration: Date.now() + json.expires_in * 1000,
-  }
+  return tokensFromResult(json.AuthenticationResult)
 }
 
 async function refreshTokens(refreshToken: string): Promise<CognitoTokens> {
-  const body = new URLSearchParams({
-    grant_type: 'refresh_token',
-    client_id: config.clientId,
-    refresh_token: refreshToken,
-  })
-  const res = await fetch(`${config.domain}/oauth2/token`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: body.toString(),
-  })
-  if (!res.ok) throw new Error(`Refresh failed: ${res.status} ${await res.text()}`)
-  const json = await res.json() as {
-    id_token: string
-    access_token: string
-    expires_in: number
-  }
-  // The refresh response usually omits refresh_token; keep the old one.
+  const json = await postIdp<{ AuthenticationResult: AuthenticationResult }>(
+    'AWSCognitoIdentityProviderService.InitiateAuth',
+    {
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
+      ClientId: config.clientId,
+      AuthParameters: { REFRESH_TOKEN: refreshToken },
+    },
+  )
+  // The refresh response omits refresh_token; keep the old one.
+  return { ...tokensFromResult(json.AuthenticationResult), refreshToken }
+}
+
+function tokensFromResult(r: AuthenticationResult): CognitoTokens {
   return {
-    idToken: json.id_token,
-    accessToken: json.access_token,
-    refreshToken,
-    expiration: Date.now() + json.expires_in * 1000,
+    idToken: r.IdToken,
+    accessToken: r.AccessToken,
+    refreshToken: r.RefreshToken,
+    expiration: Date.now() + r.ExpiresIn * 1000,
+  }
+}
+
+async function postIdp<T>(target: string, body: unknown): Promise<T> {
+  const res = await fetch(IDP_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/x-amz-json-1.1',
+      'x-amz-target': target,
+    },
+    body: JSON.stringify(body),
+  })
+  const text = await res.text()
+  if (!res.ok) throw new Error(parseCognitoError(text) ?? `${target} failed: ${res.status} ${text}`)
+  return JSON.parse(text) as T
+}
+
+function parseCognitoError(text: string): string | undefined {
+  try {
+    const err = JSON.parse(text) as CognitoError
+    return err.message ?? err.__type
+  } catch {
+    return undefined
   }
 }
 
