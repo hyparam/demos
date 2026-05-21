@@ -59,3 +59,12 @@ Provides a table view of any publicly accessible iceberg table.
 Includes version dropdown for time-traveling to view the history of a dataset.
 
 Uses vite for running client-side react.
+
+## Iceberg-auth Demo :lock:
+
+Same icebird viewer, but gated by AWS Cognito OAuth so a whitelisted user can
+read Iceberg tables from a **private** S3 bucket, and chat with a model via
+**Bedrock InvokeModel** — all directly from the browser, no backend.
+
+See [iceberg-auth/README.md](iceberg-auth/README.md) for the Cognito + IAM
+setup steps. Requires `VITE_*` env vars to be configured before building.

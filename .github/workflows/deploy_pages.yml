@@ -47,6 +47,21 @@ jobs:
         run: |
           npm i
           npm run build
+      - name: Build iceberg-auth demo
+        working-directory: iceberg-auth
+        env:
+          VITE_AWS_REGION: ${{ vars.VITE_AWS_REGION }}
+          VITE_COGNITO_DOMAIN: ${{ vars.VITE_COGNITO_DOMAIN }}
+          VITE_COGNITO_CLIENT_ID: ${{ vars.VITE_COGNITO_CLIENT_ID }}
+          VITE_COGNITO_USER_POOL_ID: ${{ vars.VITE_COGNITO_USER_POOL_ID }}
+          VITE_COGNITO_IDENTITY_POOL_ID: ${{ vars.VITE_COGNITO_IDENTITY_POOL_ID }}
+          VITE_ALLOWED_EMAIL: ${{ vars.VITE_ALLOWED_EMAIL }}
+          VITE_S3_BUCKET: ${{ vars.VITE_S3_BUCKET }}
+          VITE_S3_TABLE_PREFIX: ${{ vars.VITE_S3_TABLE_PREFIX }}
+          VITE_BEDROCK_MODEL_ID: ${{ vars.VITE_BEDROCK_MODEL_ID }}
+        run: |
+          npm i
+          npm run build
       - name: Move the build outputs to a folder
         run: |
           mkdir -p build_outputs_folder
@@ -64,6 +79,7 @@ jobs:
           mv hightable/dist build_outputs_folder/hightable
           mv icebird/dist build_outputs_folder/icebird
           mv iceberg-hypgrep/dist build_outputs_folder/iceberg-hypgrep
+          mv iceberg-auth/dist build_outputs_folder/iceberg-auth
           mv squirreling/dist build_outputs_folder/squirreling
           mv squirreling-gis/dist build_outputs_folder/squirreling-gis
           mv hypgrep/dist build_outputs_folder/hypgrep
