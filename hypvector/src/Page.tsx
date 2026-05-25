@@ -26,21 +26,51 @@ interface DisplayResult extends SearchResult {
   title?: string
 }
 
+interface NetCounter {
+  fetches: number
+  bytes: number
+  totalWaitMs: number  // summed network wait across all in-flight requests
+  maxConcurrent: number
+}
+
 interface QueryStats {
   embedMs: number
   searchMs: number
   fetches: number
   bytes: number
+  totalWaitMs: number
+  maxConcurrent: number
 }
 
-/** Wrap an AsyncBuffer to count fetches and bytes read. */
-function instrumented(buffer: AsyncBuffer, counter: { fetches: number; bytes: number }): AsyncBuffer {
+/**
+ * Wrap a raw (network-backed) AsyncBuffer to count actual fetches, bytes,
+ * cumulative wait time, and peak in-flight concurrency. Mount this BELOW
+ * cachedAsyncBuffer so cache hits are not counted as fetches.
+ *
+ * Counter is read from the ref each call so the demo can swap counters
+ * between queries without re-wrapping the buffer.
+ */
+function instrumentNetwork(buffer: AsyncBuffer, counterRef: { current: NetCounter | null }): AsyncBuffer {
+  let inFlight = 0
   return {
     byteLength: buffer.byteLength,
     slice(start: number, end?: number): ArrayBuffer | Promise<ArrayBuffer> {
-      counter.fetches += 1
-      counter.bytes += (end ?? buffer.byteLength) - start
-      return buffer.slice(start, end)
+      const c = counterRef.current
+      const reqStart = performance.now()
+      if (c) {
+        c.fetches += 1
+        c.bytes += (end ?? buffer.byteLength) - start
+        inFlight += 1
+        if (inFlight > c.maxConcurrent) c.maxConcurrent = inFlight
+      }
+      const result = buffer.slice(start, end)
+      const finish = () => {
+        inFlight -= 1
+        if (c) c.totalWaitMs += performance.now() - reqStart
+      }
+      if (result instanceof Promise) return result.finally(finish)
+      finish()
+      return result
     },
   }
 }
@@ -56,6 +86,7 @@ export default function Page({ setError }: PageProps): ReactNode {
   const extractorRef = useRef<FeatureExtractionPipeline | undefined>(undefined)
   const vectorsBufferRef = useRef<AsyncBuffer | undefined>(undefined)
   const vectorsMetaRef = useRef<FileMetaData | undefined>(undefined)
+  const netCounterRef = useRef<NetCounter | null>(null)
   const wikiBufferRef = useRef<AsyncBuffer | undefined>(undefined)
   const wikiMetaRef = useRef<FileMetaData | undefined>(undefined)
 
@@ -81,7 +112,8 @@ export default function Page({ setError }: PageProps): ReactNode {
     let cancelled = false
     async function load() {
       const raw = await asyncBufferFromUrl({ url: vectorsUrl })
-      const cached = cachedAsyncBuffer(raw)
+      const counted = instrumentNetwork(raw, netCounterRef)
+      const cached = cachedAsyncBuffer(counted)
       const meta = await parquetMetadataAsync(cached)
       if (cancelled) return
       vectorsBufferRef.current = cached
@@ -122,12 +154,14 @@ export default function Page({ setError }: PageProps): ReactNode {
     const embedMs = performance.now() - embedStart
     signal.throwIfAborted()
 
-    const counter = { fetches: 0, bytes: 0 }
-    const instrumentedBuffer = instrumented(buffer, counter)
+    // Swap in a fresh network counter for this query; reads pass through
+    // the already-wired instrumentNetwork layer below cachedAsyncBuffer.
+    const counter: NetCounter = { fetches: 0, bytes: 0, totalWaitMs: 0, maxConcurrent: 0 }
+    netCounterRef.current = counter
 
     const searchStart = performance.now()
     const hits = await searchVectors({
-      source: instrumentedBuffer,
+      source: buffer,
       metadata,
       query: queryVec,
       topK,
@@ -135,12 +169,20 @@ export default function Page({ setError }: PageProps): ReactNode {
       compressors,
     })
     const searchMs = performance.now() - searchStart
+    netCounterRef.current = null
     signal.throwIfAborted()
 
     // Show scores immediately, then fill in titles.
     const initial: DisplayResult[] = hits.map(h => ({ ...h }))
     setResults(initial)
-    setStats({ embedMs, searchMs, fetches: counter.fetches, bytes: counter.bytes })
+    setStats({
+      embedMs,
+      searchMs,
+      fetches: counter.fetches,
+      bytes: counter.bytes,
+      totalWaitMs: counter.totalWaitMs,
+      maxConcurrent: counter.maxConcurrent,
+    })
 
     // Look up titles in the wiki parquet using ids as row indices.
     const { buffer: wb, metadata: wm } = await ensureWiki()
@@ -233,6 +275,8 @@ export default function Page({ setError }: PageProps): ReactNode {
         <span>search: <code>{stats.searchMs.toFixed(0)} ms</code></span>
         <span>fetches: <code>{stats.fetches}</code></span>
         <span>read: <code>{formatBytes(stats.bytes)}</code></span>
+        <span>net wait: <code>{stats.totalWaitMs.toFixed(0)} ms</code> sum</span>
+        <span>max concurrent: <code>{stats.maxConcurrent}</code></span>
       </>}
     </div>
 
