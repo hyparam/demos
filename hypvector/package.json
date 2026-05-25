@@ -1,0 +1,40 @@
+{
+  "name": "hypvector-demo",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "coverage": "vitest run --coverage --coverage.include=src",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run --dir test",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "3.7.5",
+    "hyparquet": "1.26.0",
+    "hyparquet-compressors": "1.1.1",
+    "hyperparam": "0.4.14",
+    "hypvector": "0.1.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitest/coverage-v8": "4.1.6",
+    "eslint": "9.39.4",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.2",
+    "globals": "17.6.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.59.4",
+    "vite": "8.0.13",
+    "vitest": "4.1.6"
+  }
+}

@@ -42,6 +42,11 @@ jobs:
         run: |
           npm i
           npm run build
+      - name: Build hypvector demo
+        working-directory: hypvector
+        run: |
+          npm i
+          npm run build
       - name: Build iceberg-hypgrep demo
         working-directory: iceberg-hypgrep
         run: |
@@ -74,6 +79,7 @@ jobs:
           echo "<li><a href="./squirreling">squirreling demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./squirreling-gis">squirreling-gis demo</a></li>" >> build_outputs_folder/index.html
           echo "<li><a href="./hypgrep">hypgrep demo</a></li>" >> build_outputs_folder/index.html
+          echo "<li><a href="./hypvector">hypvector demo</a></li>" >> build_outputs_folder/index.html
           echo "</ul>" >> build_outputs_folder/index.html
           mv hyparquet/dist build_outputs_folder/hyparquet
           mv hightable/dist build_outputs_folder/hightable
@@ -83,6 +89,7 @@ jobs:
           mv squirreling/dist build_outputs_folder/squirreling
           mv squirreling-gis/dist build_outputs_folder/squirreling-gis
           mv hypgrep/dist build_outputs_folder/hypgrep
+          mv hypvector/dist build_outputs_folder/hypvector
       - name: Upload static files as artifact
         id: deployment
         uses: actions/upload-pages-artifact@v3
