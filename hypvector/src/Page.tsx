@@ -1,7 +1,7 @@
 import { type FeatureExtractionPipeline, pipeline } from '@huggingface/transformers'
 import { AsyncBuffer, FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync, parquetReadObjects } from 'hyparquet'
 import { compressors } from 'hyparquet-compressors'
-import { type SearchResult, searchVectors } from 'hypvector'
+import { type SearchResult, prefetchBinary, searchVectors } from 'hypvector'
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 const vectorsUrl = 'https://s3.hyperparam.app/hypvector/wiki_en.vectors.parquet'
@@ -29,7 +29,6 @@ interface DisplayResult extends SearchResult {
 interface NetCounter {
   fetches: number
   bytes: number
-  totalWaitMs: number  // summed network wait across all in-flight requests
   maxConcurrent: number
 }
 
@@ -38,14 +37,13 @@ interface QueryStats {
   searchMs: number
   fetches: number
   bytes: number
-  totalWaitMs: number
   maxConcurrent: number
 }
 
 /**
  * Wrap a raw (network-backed) AsyncBuffer to count actual fetches, bytes,
- * cumulative wait time, and peak in-flight concurrency. Mount this BELOW
- * cachedAsyncBuffer so cache hits are not counted as fetches.
+ * and peak in-flight concurrency. Mount this BELOW cachedAsyncBuffer so
+ * cache hits are not counted as fetches.
  *
  * Counter is read from the ref each call so the demo can swap counters
  * between queries without re-wrapping the buffer.
@@ -56,7 +54,6 @@ function instrumentNetwork(buffer: AsyncBuffer, counterRef: { current: NetCounte
     byteLength: buffer.byteLength,
     slice(start: number, end?: number): ArrayBuffer | Promise<ArrayBuffer> {
       const c = counterRef.current
-      const reqStart = performance.now()
       if (c) {
         c.fetches += 1
         c.bytes += (end ?? buffer.byteLength) - start
@@ -64,10 +61,7 @@ function instrumentNetwork(buffer: AsyncBuffer, counterRef: { current: NetCounte
         if (inFlight > c.maxConcurrent) c.maxConcurrent = inFlight
       }
       const result = buffer.slice(start, end)
-      const finish = () => {
-        inFlight -= 1
-        if (c) c.totalWaitMs += performance.now() - reqStart
-      }
+      function finish() { inFlight -= 1 }
       if (result instanceof Promise) return result.finally(finish)
       finish()
       return result
@@ -86,6 +80,7 @@ export default function Page({ setError }: PageProps): ReactNode {
   const extractorRef = useRef<FeatureExtractionPipeline | undefined>(undefined)
   const vectorsBufferRef = useRef<AsyncBuffer | undefined>(undefined)
   const vectorsMetaRef = useRef<FileMetaData | undefined>(undefined)
+  const binaryRef = useRef<Uint8Array | undefined>(undefined)
   const netCounterRef = useRef<NetCounter | null>(null)
   const wikiBufferRef = useRef<AsyncBuffer | undefined>(undefined)
   const wikiMetaRef = useRef<FileMetaData | undefined>(undefined)
@@ -118,6 +113,10 @@ export default function Page({ setError }: PageProps): ReactNode {
       if (cancelled) return
       vectorsBufferRef.current = cached
       vectorsMetaRef.current = meta
+      // Pull the small binary column into RAM up front so every query skips
+      // phase-1 fetches. ~7.5 MB at 156k × 384-dim.
+      const binary = await prefetchBinary({ source: cached, metadata: meta, compressors })
+      binaryRef.current = binary
       setVectorsStatus('ready')
     }
     load().catch((e: unknown) => {
@@ -156,7 +155,7 @@ export default function Page({ setError }: PageProps): ReactNode {
 
     // Swap in a fresh network counter for this query; reads pass through
     // the already-wired instrumentNetwork layer below cachedAsyncBuffer.
-    const counter: NetCounter = { fetches: 0, bytes: 0, totalWaitMs: 0, maxConcurrent: 0 }
+    const counter: NetCounter = { fetches: 0, bytes: 0, maxConcurrent: 0 }
     netCounterRef.current = counter
 
     const searchStart = performance.now()
@@ -165,6 +164,7 @@ export default function Page({ setError }: PageProps): ReactNode {
       metadata,
       query: queryVec,
       topK,
+      binary: binaryRef.current,
       signal,
       compressors,
     })
@@ -180,7 +180,6 @@ export default function Page({ setError }: PageProps): ReactNode {
       searchMs,
       fetches: counter.fetches,
       bytes: counter.bytes,
-      totalWaitMs: counter.totalWaitMs,
       maxConcurrent: counter.maxConcurrent,
     })
 
@@ -275,7 +274,6 @@ export default function Page({ setError }: PageProps): ReactNode {
         <span>search: <code>{stats.searchMs.toFixed(0)} ms</code></span>
         <span>fetches: <code>{stats.fetches}</code></span>
         <span>read: <code>{formatBytes(stats.bytes)}</code></span>
-        <span>net wait: <code>{stats.totalWaitMs.toFixed(0)} ms</code> sum</span>
         <span>max concurrent: <code>{stats.maxConcurrent}</code></span>
       </>}
     </div>
