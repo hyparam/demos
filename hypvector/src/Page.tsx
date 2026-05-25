@@ -226,7 +226,7 @@ export default function Page({ setError }: PageProps): ReactNode {
     </div>}
 
     <div className='stats-bar'>
-      <span>50,000 wiki titles · 384-dim float32 · 249 MB</span>
+      <span>156,289 wiki titles · 384-dim float32 · 249 MB</span>
       {stats && <>
         <span className='spacer' />
         <span>embed: <code>{stats.embedMs.toFixed(0)} ms</code></span>
