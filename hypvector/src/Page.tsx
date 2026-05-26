@@ -1,7 +1,7 @@
 import { type FeatureExtractionPipeline, pipeline } from '@huggingface/transformers'
 import { AsyncBuffer, FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync, parquetReadObjects } from 'hyparquet'
 import { compressors } from 'hyparquet-compressors'
-import { type SearchResult, searchVectors } from 'hypvector'
+import { type SearchResult, prefetchBinary, searchVectors } from 'hypvector'
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 const vectorsUrl = 'https://s3.hyperparam.app/hypvector/wiki_en.vectors.parquet'
@@ -26,21 +26,45 @@ interface DisplayResult extends SearchResult {
   title?: string
 }
 
+interface NetCounter {
+  fetches: number
+  bytes: number
+  maxConcurrent: number
+}
+
 interface QueryStats {
   embedMs: number
   searchMs: number
   fetches: number
   bytes: number
+  maxConcurrent: number
 }
 
-/** Wrap an AsyncBuffer to count fetches and bytes read. */
-function instrumented(buffer: AsyncBuffer, counter: { fetches: number; bytes: number }): AsyncBuffer {
+/**
+ * Wrap a raw (network-backed) AsyncBuffer to count actual fetches, bytes,
+ * and peak in-flight concurrency. Mount this BELOW cachedAsyncBuffer so
+ * cache hits are not counted as fetches.
+ *
+ * Counter is read from the ref each call so the demo can swap counters
+ * between queries without re-wrapping the buffer.
+ */
+function instrumentNetwork(buffer: AsyncBuffer, counterRef: { current: NetCounter | null }): AsyncBuffer {
+  let inFlight = 0
   return {
     byteLength: buffer.byteLength,
     slice(start: number, end?: number): ArrayBuffer | Promise<ArrayBuffer> {
-      counter.fetches += 1
-      counter.bytes += (end ?? buffer.byteLength) - start
-      return buffer.slice(start, end)
+      const c = counterRef.current
+      if (c) {
+        c.fetches += 1
+        c.bytes += (end ?? buffer.byteLength) - start
+        inFlight += 1
+        if (inFlight > c.maxConcurrent) c.maxConcurrent = inFlight
+      }
+      const result = buffer.slice(start, end)
+      function finish() { inFlight -= 1 }
+      if (result instanceof Promise) return result.finally(finish)
+      finish()
+      return result
     },
   }
 }
@@ -56,6 +80,8 @@ export default function Page({ setError }: PageProps): ReactNode {
   const extractorRef = useRef<FeatureExtractionPipeline | undefined>(undefined)
   const vectorsBufferRef = useRef<AsyncBuffer | undefined>(undefined)
   const vectorsMetaRef = useRef<FileMetaData | undefined>(undefined)
+  const binaryRef = useRef<Uint8Array | undefined>(undefined)
+  const netCounterRef = useRef<NetCounter | null>(null)
   const wikiBufferRef = useRef<AsyncBuffer | undefined>(undefined)
   const wikiMetaRef = useRef<FileMetaData | undefined>(undefined)
 
@@ -81,11 +107,16 @@ export default function Page({ setError }: PageProps): ReactNode {
     let cancelled = false
     async function load() {
       const raw = await asyncBufferFromUrl({ url: vectorsUrl })
-      const cached = cachedAsyncBuffer(raw)
+      const counted = instrumentNetwork(raw, netCounterRef)
+      const cached = cachedAsyncBuffer(counted)
       const meta = await parquetMetadataAsync(cached)
       if (cancelled) return
       vectorsBufferRef.current = cached
       vectorsMetaRef.current = meta
+      // Pull the small binary column into RAM up front so every query skips
+      // phase-1 fetches. ~7.5 MB at 156k × 384-dim.
+      const binary = await prefetchBinary({ source: cached, metadata: meta, compressors })
+      binaryRef.current = binary
       setVectorsStatus('ready')
     }
     load().catch((e: unknown) => {
@@ -122,25 +153,35 @@ export default function Page({ setError }: PageProps): ReactNode {
     const embedMs = performance.now() - embedStart
     signal.throwIfAborted()
 
-    const counter = { fetches: 0, bytes: 0 }
-    const instrumentedBuffer = instrumented(buffer, counter)
+    // Swap in a fresh network counter for this query; reads pass through
+    // the already-wired instrumentNetwork layer below cachedAsyncBuffer.
+    const counter: NetCounter = { fetches: 0, bytes: 0, maxConcurrent: 0 }
+    netCounterRef.current = counter
 
     const searchStart = performance.now()
     const hits = await searchVectors({
-      source: instrumentedBuffer,
+      source: buffer,
       metadata,
       query: queryVec,
       topK,
+      binary: binaryRef.current,
       signal,
       compressors,
     })
     const searchMs = performance.now() - searchStart
+    netCounterRef.current = null
     signal.throwIfAborted()
 
     // Show scores immediately, then fill in titles.
     const initial: DisplayResult[] = hits.map(h => ({ ...h }))
     setResults(initial)
-    setStats({ embedMs, searchMs, fetches: counter.fetches, bytes: counter.bytes })
+    setStats({
+      embedMs,
+      searchMs,
+      fetches: counter.fetches,
+      bytes: counter.bytes,
+      maxConcurrent: counter.maxConcurrent,
+    })
 
     // Look up titles in the wiki parquet using ids as row indices.
     const { buffer: wb, metadata: wm } = await ensureWiki()
@@ -226,13 +267,14 @@ export default function Page({ setError }: PageProps): ReactNode {
     </div>}
 
     <div className='stats-bar'>
-      <span>50,000 wiki titles · 384-dim float32 · 249 MB</span>
+      <span>156,289 wiki titles · 384-dim float32 · 249 MB</span>
       {stats && <>
         <span className='spacer' />
         <span>embed: <code>{stats.embedMs.toFixed(0)} ms</code></span>
         <span>search: <code>{stats.searchMs.toFixed(0)} ms</code></span>
         <span>fetches: <code>{stats.fetches}</code></span>
         <span>read: <code>{formatBytes(stats.bytes)}</code></span>
+        <span>max concurrent: <code>{stats.maxConcurrent}</code></span>
       </>}
     </div>
 

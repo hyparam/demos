@@ -26,5 +26,5 @@ http-server dist/
 - `hypvector` is currently consumed via a local `file:` dependency (`../../hypvector`).
   Once it is published to npm this can be switched to a version range.
 - The vector parquet on S3 (`s3.hyperparam.app/hypvector/wiki_en.vectors.parquet`) was
-  built by running `npm run data:embed` in the `hypvector` repo against the 50k
+  built by running `npm run data:embed` in the `hypvector` repo against the 156k
   English Wikipedia sample and uploaded with `aws s3 cp ... --profile hyperparam-platypii`.

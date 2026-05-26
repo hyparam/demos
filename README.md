@@ -5,18 +5,6 @@
 [![workflow status](https://github.com/hyparam/demos/actions/workflows/ci_squirreling_demo.yml/badge.svg)](https://github.com/hyparam/demos/actions)
 [![mit license](https://img.shields.io/badge/License-MIT-orange.svg)](https://opensource.org/licenses/MIT)
 
-## HighTable Demo :classical_building:
-
-HighTable is a react virtual-scroll table component for view large datasets.
-
-Demo: https://hyparam.github.io/demos/hightable/
-
-HighTable: https://github.com/hyparam/hightable
-
-Example project that demonstrates loading random data into a HighTable.
-
-Uses vite for running client-side react.
-
 ## Hyparquet Demo :parrot:
 
 Hyparquet is an Apache Parquet file parser implemented entirely in JavaScript.
@@ -60,11 +48,14 @@ Includes version dropdown for time-traveling to view the history of a dataset.
 
 Uses vite for running client-side react.
 
-## Iceberg-auth Demo :lock:
+## HighTable Demo :classical_building:
 
-Same icebird viewer, but gated by AWS Cognito OAuth so a whitelisted user can
-read Iceberg tables from a **private** S3 bucket, and chat with a model via
-**Bedrock InvokeModel** — all directly from the browser, no backend.
+HighTable is a react virtual-scroll table component for view large datasets.
 
-See [iceberg-auth/README.md](iceberg-auth/README.md) for the Cognito + IAM
-setup steps. Requires `VITE_*` env vars to be configured before building.
+Demo: https://hyparam.github.io/demos/hightable/
+
+HighTable: https://github.com/hyparam/hightable
+
+Example project that demonstrates loading random data into a HighTable.
+
+Uses vite for running client-side react.
