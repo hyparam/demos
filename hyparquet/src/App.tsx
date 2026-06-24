@@ -7,6 +7,7 @@ import { byteLengthFromUrl, parquetMetadataAsync } from 'hyparquet'
 import { AsyncBufferFrom, asyncBufferFrom, parquetDataFrame } from 'hyperparam'
 import { useCallback, useEffect, useState } from 'react'
 import Dropzone from './Dropzone.js'
+import { setCurrentFile, setLoadUrlFn } from './webmcp.js'
 import Layout from './Layout.js'
 
 export default function App(): ReactNode {
@@ -15,6 +16,9 @@ export default function App(): ReactNode {
 
   const [error, setError] = useState<Error>()
   const [pageProps, setPageProps] = useState<PageProps>()
+
+  // Register the URL loader with WebMCP
+  setLoadUrlFn(onUrlDrop)
 
   const setUnknownError = useCallback((e: unknown) => {
     setError(e instanceof Error ? e : new Error(String(e)))
@@ -25,6 +29,7 @@ export default function App(): ReactNode {
     const metadata = await parquetMetadataAsync(asyncBuffer)
     const df = sortableDataFrame(parquetDataFrame(from, metadata))
     setPageProps({ metadata, df, name, byteLength: from.byteLength, setError: setUnknownError })
+    setCurrentFile(name, 'url' in from ? from.url : undefined)
   }, [setUnknownError])
 
   const onUrlDrop = useCallback(

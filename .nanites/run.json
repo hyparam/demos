@@ -1,0 +1,58 @@
+{
+  "managerKey": "installation:122731586:repo:937499295",
+  "githubInstallationId": 122731586,
+  "githubRepositoryId": 937499295,
+  "repository": {
+    "id": 937499295,
+    "name": "demos",
+    "full_name": "hyparam/demos",
+    "owner": {
+      "login": "hyparam"
+    },
+    "default_branch": "master",
+    "private": false,
+    "permissions": {
+      "admin": true,
+      "push": true,
+      "pull": true
+    }
+  },
+  "runKey": "manual:27646492-52e1-432c-8d70-f8421affeac7",
+  "nanite": {
+    "id": "webmcp-maintainer",
+    "label": "WebMCP maintainer",
+    "purpose": "Implement a minimal WebMCP slice in the repo's main public-facing web app, prefer a landing or marketing surface when one exists, prefer the CDN script tag over package installs for browser-side WebMCP when possible, verify the real page behavior, and produce a support artifact suitable for a durable support PR.",
+    "variant": "workspace-browser",
+    "soul": "webmcp-soul",
+    "skills": [
+      "webmcp-maintainer"
+    ],
+    "toolSurface": [
+      "workspace",
+      "git",
+      "browser",
+      "publishing"
+    ],
+    "mcpServers": [
+      {
+        "name": "WebMCP Documentation",
+        "url": "https://docs.mcp-b.ai/mcp"
+      }
+    ]
+  },
+  "naniteId": "webmcp-maintainer",
+  "variant": "workspace-browser",
+  "trigger": {
+    "kind": "manual",
+    "label": "Manual WebMCP maintainer"
+  },
+  "task": "Implement a minimal WebMCP slice in the repo's main public-facing web app, prefer a landing or marketing surface when one exists, prefer the CDN script tag over package installs for browser-side WebMCP when possible, verify the real page behavior, and produce a support artifact suitable for a durable support PR. Dogfood the existing codebase: inspect only enough to find the main public-facing web app, prefer a landing or marketing surface over dashboards when both exist, use the configured docs MCP server for the current WebMCP syntax, prefer the CDN script tag over package installs when adding browser-side WebMCP, ship one narrow tool instead of a catalog, verify the result, and finish with a clean artifact.",
+  "scope": {
+    "repositoryFullName": "hyparam/demos",
+    "branch": "master",
+    "changedFiles": [],
+    "detailsUrl": "https://app.sigvelo.com/repos/937499295?run=manual%3A27646492-52e1-432c-8d70-f8421affeac7"
+  },
+  "initialGitHubResult": null,
+  "startedAt": "2026-04-09T20:17:44.595Z"
+}
