@@ -24,11 +24,14 @@ function exampleQueries(mode: Mode, table: string): string[] {
       `SELECT language, COUNT(*) AS conversations FROM ${table} GROUP BY language ORDER BY conversations DESC LIMIT 20`,
     ]
   }
-  // The last one is a regex (character class, quantifier, escaped paren) that
-  // finds Python function definitions in the chat logs — grep's index handles
-  // more than plain substrings, and it stays fast because "def " is a literal
-  // run the n-gram index can prune on.
-  return ['minecraft', 'sourdough', 'def [a-z]+\\(']
+  // The last one is a regex (group + alternation) that finds Python imports
+  // in the chat logs — grep's index handles more than plain substrings. It
+  // stays fast because each alternation arm pins a literal ("numpy",
+  // "pandas") that is 5+ chars AND rare in prose, so the n-gram index prunes
+  // to few blocks. A pattern whose literals are all short (`def [a-z]+\(`)
+  // can't prune at all, and one whose literals are common English words
+  // (`create`) prunes on paper but still verifies most blocks.
+  return ['minecraft', 'sourdough', 'import (numpy|pandas)']
 }
 
 // A grep query with regex metacharacters that compiles is run as a RegExp;
