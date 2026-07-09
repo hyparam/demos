@@ -1,5 +1,6 @@
 import HighTable, { CellContentProps } from 'hightable'
 import { DataFrame, arrayDataFrame } from 'hightable/dataframe'
+import { cachingResolver, urlResolver } from 'icebird'
 import { collect, createStore, grep, sql } from 'hypstore'
 import { KeyboardEvent, ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
@@ -23,12 +24,40 @@ function exampleQueries(mode: Mode, table: string): string[] {
       `SELECT language, COUNT(*) AS conversations FROM ${table} GROUP BY language ORDER BY conversations DESC LIMIT 20`,
     ]
   }
-  return ['minecraft', 'sourdough', 'time travel']
+  // The last one is a regex (character class, quantifier, escaped paren) that
+  // finds Python function definitions in the chat logs — grep's index handles
+  // more than plain substrings, and it stays fast because "def " is a literal
+  // run the n-gram index can prune on.
+  return ['minecraft', 'sourdough', 'def [a-z]+\\(']
+}
+
+// A grep query with regex metacharacters that compiles is run as a RegExp;
+// anything else is a plain substring. hypgrep prunes the index by the query's
+// mandatory literal runs, so a regex is fast as long as it has one.
+function parseGrepQuery(input: string): string | RegExp {
+  if (!/[[\](){}.*+?^$|\\]/.test(input)) return input
+  try {
+    return new RegExp(input)
+  } catch {
+    return input
+  }
+}
+
+// Locate the first grep hit within a cell value to highlight it: substrings
+// match case-insensitively, regexes use their own casing.
+function grepMatch(value: string, rawQuery: string): { index: number, length: number } | undefined {
+  const query = parseGrepQuery(rawQuery)
+  if (query instanceof RegExp) {
+    const match = new RegExp(query.source, query.flags).exec(value)
+    return match ? { index: match.index, length: match[0].length } : undefined
+  }
+  const index = value.toLowerCase().indexOf(rawQuery.toLowerCase())
+  return index < 0 ? undefined : { index, length: rawQuery.length }
 }
 
 const placeholders: Record<Mode, string> = {
   sql: 'SELECT * FROM wildchat ... (press Enter to run)',
-  grep: 'Find a substring across all rows...',
+  grep: 'Find a substring or /regex/ across all rows...',
 }
 
 interface QueryResult {
@@ -64,7 +93,9 @@ export default function Page({ warehouseUrl, table, initialMode, initialQuery, s
     initialMode === 'sql' ? { query: initialQuery ?? defaultQuery('sql', table) } : undefined,
   )
 
-  const store = useMemo(() => createStore({ warehouseUrl }), [warehouseUrl])
+  // Cache metadata and range reads across queries — without this every query
+  // re-fetches the same manifests and index files, which is painfully slow.
+  const store = useMemo(() => createStore({ warehouseUrl, resolver: cachingResolver(urlResolver()) }), [warehouseUrl])
 
   // Keep the URL shareable: ?mode=grep&q=...
   useEffect(() => {
@@ -85,7 +116,7 @@ export default function Page({ warehouseUrl, table, initialMode, initialQuery, s
       columns = results.columns
       rows = await collect(results)
     } else {
-      for await (const row of grep({ store, table, query, limit: grepLimit })) {
+      for await (const row of grep({ store, table, query: parseGrepQuery(query), limit: grepLimit })) {
         if (signal.aborted) return
         firstRowTime ??= performance.now() - startTime
         rows.push(row)
@@ -164,14 +195,15 @@ export default function Page({ warehouseUrl, table, initialMode, initialQuery, s
   const renderCellContent = useCallback(({ cell, stringify }: CellContentProps) => {
     const value: unknown = cell?.value
     if (result?.mode !== 'grep' || typeof value !== 'string') return stringify(value)
-    const index = value.toLowerCase().indexOf(result.query.toLowerCase())
-    if (index < 0) return stringify(value)
+    const match = grepMatch(value, result.query)
+    if (!match) return stringify(value)
+    const { index, length } = match
     const truncateBefore = index > 20 ? '...' : ''
     return <>
       {truncateBefore}
       {value.slice(0, index).slice(-20)}
-      <mark>{value.slice(index, index + result.query.length)}</mark>
-      {value.slice(index + result.query.length)}
+      <mark>{value.slice(index, index + length)}</mark>
+      {value.slice(index + length)}
     </>
   }, [result])
 
