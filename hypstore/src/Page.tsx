@@ -11,10 +11,10 @@ const modes: { key: Mode, label: string }[] = [
   { key: 'grep', label: 'Grep' },
 ]
 
-const grepLimit = 100
+const grepLimit = 30
 
 function defaultQuery(mode: Mode, table: string): string {
-  return mode === 'sql' ? `SELECT * FROM ${table} LIMIT 50` : ''
+  return mode === 'sql' ? `SELECT * FROM ${table} LIMIT 30` : ''
 }
 
 function exampleQueries(mode: Mode, table: string): string[] {
