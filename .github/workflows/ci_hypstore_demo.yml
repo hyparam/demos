@@ -1,0 +1,15 @@
+name: hypstore-demo
+on:
+  workflow_dispatch:
+  push:
+    branches: ["master"]
+  pull_request:
+    paths:
+      - 'hypstore/**'
+      - '.github/workflows/_common_jobs.yml'
+      - '.github/workflows/ci_hypstore_demo.yml'
+jobs:
+  ci:
+    uses: ./.github/workflows/_common_jobs.yml
+    with:
+      workspace: hypstore

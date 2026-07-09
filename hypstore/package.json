@@ -1,0 +1,44 @@
+{
+  "name": "hypstore-demo",
+  "private": true,
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "test": "vitest run --dir test",
+    "typecheck": "tsc",
+    "create-table": "node scripts/createTable.js"
+  },
+  "dependencies": {
+    "hightable": "0.26.4",
+    "hyperparam": "0.4.14",
+    "hypstore": "0.2.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "3.1083.0",
+    "@aws-sdk/credential-providers": "3.1050.0",
+    "@aws-sdk/lib-storage": "3.1083.0",
+    "@types/react": "19.2.15",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "eslint": "9.39.4",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-react-refresh": "0.5.2",
+    "globals": "17.6.0",
+    "hyparquet": "1.26.2",
+    "hyparquet-compressors": "1.1.1",
+    "hyparquet-writer": "0.16.1",
+    "icebird": "0.8.13",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.60.0",
+    "vite": "8.0.14",
+    "vitest": "4.1.7"
+  }
+}
