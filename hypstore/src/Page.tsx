@@ -24,14 +24,17 @@ function exampleQueries(mode: Mode, table: string): string[] {
       `SELECT language, COUNT(*) AS conversations FROM ${table} GROUP BY language ORDER BY conversations DESC LIMIT 20`,
     ]
   }
-  // The last one is a regex (group + alternation) that finds Python imports
-  // in the chat logs — grep's index handles more than plain substrings. It
-  // stays fast because each alternation arm pins a literal ("numpy",
-  // "pandas") that is 5+ chars AND rare in prose, so the n-gram index prunes
-  // to few blocks. A pattern whose literals are all short (`def [a-z]+\(`)
-  // can't prune at all, and one whose literals are common English words
-  // (`create`) prunes on paper but still verifies most blocks.
-  return ['minecraft', 'sourdough', 'import (numpy|pandas)']
+  // Substring examples are dense terms in this coding-heavy dataset, so the
+  // 30-row limit fills from the first few blocks instead of hunting rare
+  // matches across the file (a rare term like "minecraft" takes 5x longer for
+  // the same limit). The last one is a regex (group + alternation) — grep's
+  // index handles more than plain substrings. It stays fast because each
+  // alternation arm pins a literal ("numpy", "pandas") that is 5+ chars AND
+  // rare in prose, so the n-gram index prunes to few blocks. A pattern whose
+  // literals are all short (`def [a-z]+\(`) can't prune at all, and one whose
+  // literals are common English words (`create`) prunes on paper but still
+  // verifies most blocks.
+  return ['javascript', 'python', 'import (numpy|pandas)']
 }
 
 // A grep query with regex metacharacters that compiles is run as a RegExp;
@@ -123,6 +126,9 @@ export default function Page({ warehouseUrl, table, initialMode, initialQuery, s
         if (signal.aborted) return
         firstRowTime ??= performance.now() - startTime
         rows.push(row)
+        // Stream matches into the table as they land instead of waiting for
+        // the full limit to fill.
+        setResult({ mode, query, rows: [...rows], columns: Object.keys(rows[0]), queryTime: performance.now() - startTime, firstRowTime })
       }
     }
     if (signal.aborted) return
