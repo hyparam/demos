@@ -10,7 +10,7 @@ interface LayoutProps {
 
 export default function Layout({ children, className, error, onShowAbout }: LayoutProps): ReactNode {
   useEffect(() => {
-    document.title = 'hypstore: SQL and grep over Iceberg tables'
+    document.title = 'HypStore: SQL and grep over Iceberg tables'
   }, [])
 
   return <div className='content-container'>

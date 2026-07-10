@@ -34,7 +34,7 @@ function exampleQueries(mode: Mode, table: string): string[] {
   // literals are all short (`def [a-z]+\(`) can't prune at all, and one whose
   // literals are common English words (`create`) prunes on paper but still
   // verifies most blocks.
-  return ['javascript', 'python', 'import (numpy|pandas)']
+  return ['certain', 'javascript', 'python', 'import (numpy|pandas)']
 }
 
 // A grep query with regex metacharacters that compiles is run as a RegExp;
