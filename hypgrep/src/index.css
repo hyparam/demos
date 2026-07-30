@@ -168,6 +168,35 @@ main {
   gap: 10px;
 }
 
+.examples-row {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  padding: 6px 12px;
+}
+.examples-label {
+  color: #666;
+  font-size: 12px;
+}
+.examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.example-chip {
+  background: #efeaf8;
+  border: 1px solid #d8cef0;
+  border-radius: 14px;
+  color: #3a276e;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 3px 12px;
+}
+.example-chip:hover,
+.example-chip:focus {
+  background: #e1d6f5;
+}
+
 /* welcome modal */
 .modal-overlay {
   position: fixed;

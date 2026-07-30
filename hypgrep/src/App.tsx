@@ -6,7 +6,8 @@ import Layout from './Layout.js'
 import Page, { PageProps } from './Page.js'
 import Welcome from './Welcome.js'
 
-const exampleUrl = 'https://s3.hyperparam.app/hypgrep/wiki_en100.parquet'
+// s3://hyperparam-public/hypgrep/wildchat.parquet
+const exampleUrl = 'https://s3.hyperparam.app/hypgrep/wildchat.parquet'
 const welcomeDismissedKey = 'hypgrep-welcome-dismissed'
 
 function hasDismissedWelcome(): boolean {
@@ -18,9 +19,8 @@ function setWelcomeDismissed(): void {
 }
 
 export default function App(): ReactNode {
-  // Source parquet to grep: `?key=https://...` overrides the Wikipedia default
-  // (e.g. a FineGrep shard in S3). The matching `.index.parquet` is inferred
-  // downstream in Page.
+  // Source parquet to grep: `?key=https://...` overrides the WildChat default.
+  // The matching `.index.parquet` is inferred downstream in Page.
   const sourceUrl = new URLSearchParams(location.search).get('key') ?? exampleUrl
 
   const [error, setError] = useState<Error>()

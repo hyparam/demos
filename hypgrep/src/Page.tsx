@@ -22,9 +22,31 @@ function asyncBufferFactory({ url, byteLength }: { url: string; byteLength?: num
   return cached
 }
 
+const exampleQueries = ['certain', 'javascript', 'python', 'import (numpy|pandas)']
+
+// A grep query with regex metacharacters that compiles is run as a RegExp;
+// anything else is a plain substring.
+function parseGrepQuery(input: string): string | RegExp {
+  if (!/[[\](){}.*+?^$|\\]/.test(input)) return input
+  try {
+    return new RegExp(input)
+  } catch {
+    return input
+  }
+}
+
+function grepMatch(value: string, rawQuery: string): { index: number; length: number } | undefined {
+  const query = parseGrepQuery(rawQuery)
+  if (query instanceof RegExp) {
+    const match = new RegExp(query.source, query.flags).exec(value)
+    return match ? { index: match.index, length: match[0].length } : undefined
+  }
+  const index = value.toLowerCase().indexOf(rawQuery.toLowerCase())
+  return index < 0 ? undefined : { index, length: rawQuery.length }
+}
+
 /**
  * Hypgrep demo page
- * Try "Vongphachanh" or "gratianopolitanus" as a search term
  *
  * @param {Object} props
  * @returns {ReactNode}
@@ -61,7 +83,7 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       const url = name
       const rowGen = parquetFind({
         url,
-        query,
+        query: parseGrepQuery(query),
         limit: 20,
         asyncBufferFactory,
         indexMetadata,
@@ -101,31 +123,18 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
   }, [name, setError])
 
   const renderCellContent = useCallback(({ cell, stringify }: CellContentProps) => {
-    // Find first keyword match and highlight it
-    const queryKeys = query.split(' ').map(q => q.toLowerCase())
     const value: unknown = cell?.value
-    if (typeof value === 'string' && queryKeys.length > 0) {
-      const lowerValue = value.toLowerCase()
-      let firstIndex = -1
-      let firstLength = 0
-      for (const q of queryKeys) {
-        const index = lowerValue.indexOf(q)
-        if (index >= 0 && (firstIndex === -1 || index < firstIndex)) {
-          firstIndex = index
-          firstLength = q.length
-        }
-      }
-      if (firstIndex >= 0) {
-        const truncateBefore = firstIndex > 20 ? '...' : ''
-        return <>
-          {truncateBefore}
-          {value.slice(0, firstIndex).slice(-20)}
-          <mark>{value.slice(firstIndex, firstIndex + firstLength)}</mark>
-          {value.slice(firstIndex + firstLength)}
-        </>
-      }
-    }
-    return stringify(value)
+    if (typeof value !== 'string') return stringify(value)
+    const match = grepMatch(value, query)
+    if (!match) return stringify(value)
+    const { index, length } = match
+    const truncateBefore = index > 20 ? '...' : ''
+    return <>
+      {truncateBefore}
+      {value.slice(0, index).slice(-20)}
+      <mark>{value.slice(index, index + length)}</mark>
+      {value.slice(index + length)}
+    </>
   }, [query])
 
   return <>
@@ -147,6 +156,14 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
         />
       </div>
     </div>
+    {!query && <div className='examples-row'>
+      <span className='examples-label'>Try:</span>
+      <div className='examples'>
+        {exampleQueries.map(example =>
+          <button key={example} className='example-chip' onClick={() => { setQuery(example) }}>{example}</button>,
+        )}
+      </div>
+    </div>}
     <HighTable
       focus={false}
       cacheKey={name}
