@@ -142,18 +142,62 @@ main {
   white-space: nowrap;
 }
 
-.view-header {
-  align-items: center;
-  color: #444;
-  display: flex;
-  font-size: 10pt;
-  gap: 16px;
-  height: 22px;
-  padding: 0 8px;
-  /* all one line */
+.top-header-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.top-stats {
+  color: #ccc;
+  display: flex;
+  font-size: 11px;
+  font-weight: 400;
+  gap: 12px;
+  margin-left: 20px;
   white-space: nowrap;
 }
+
+/* download progress bars in the top header */
+.download-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-left: 20px;
+}
+.download-bar {
+  align-items: center;
+  display: flex;
+  font-size: 10px;
+  font-weight: 400;
+  gap: 6px;
+}
+.download-label {
+  color: #bbb;
+  text-align: right;
+  width: 40px;
+}
+.download-track {
+  background: #555;
+  border-radius: 3px;
+  height: 6px;
+  overflow: hidden;
+  width: 100px;
+}
+.download-fill {
+  background: #a58bde;
+  height: 100%;
+  min-width: 1px;
+  transition: width 0.2s;
+}
+.download-bytes {
+  color: #ccc;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  width: 110px;
+}
+
 .viewer {
   display: flex;
   flex: 1;
@@ -161,18 +205,27 @@ main {
   white-space: pre-wrap;
   overflow-y: auto;
 }
-.spacer {
-  display: flex;
-  align-items: center;
-  margin-left: auto;
-  gap: 10px;
-}
 
 .examples-row {
-  align-items: baseline;
+  align-items: center;
   display: flex;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 0 6px 6px 6px;
+}
+.search-input {
+  flex: 0 0 240px;
+  height: 26px;
+  margin-right: 8px;
+  padding: 2px 10px;
+}
+.query-times {
+  color: #666;
+  display: flex;
+  font-size: 12px;
+  gap: 12px;
+  /* push the examples to the right */
+  margin-right: auto;
+  white-space: nowrap;
 }
 .examples-label {
   color: #666;

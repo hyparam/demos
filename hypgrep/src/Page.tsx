@@ -3,6 +3,7 @@ import { DataFrame, arrayDataFrame } from 'hightable/dataframe'
 import { AsyncBuffer, FileMetaData, asyncBufferFromUrl, cachedAsyncBuffer, parquetMetadataAsync } from 'hyparquet'
 import { parquetFind } from 'hypgrep'
 import { ReactNode, useCallback, useEffect, useState } from 'react'
+import { useDownloaded } from './downloads.js'
 
 export interface PageProps {
   metadata: FileMetaData
@@ -57,6 +58,11 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
   const [queryTime, setQueryTime] = useState<number | undefined>()
   const [firstRowTime, setFirstRowTime] = useState<number | undefined>()
   const [indexMetadata, setIndexMetadata] = useState<FileMetaData | undefined>()
+  const [indexByteLength, setIndexByteLength] = useState<number | undefined>()
+
+  const indexUrl = name.replace(/\.parquet$/i, '.index.parquet')
+  const sourceDownloaded = useDownloaded(name)
+  const indexDownloaded = useDownloaded(indexUrl)
 
   const isQuerying = query.length > 2
   const filteredDf = isQuerying ? queryResultsDf : df
@@ -115,12 +121,13 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
 
   // preload index metadata
   useEffect(() => {
-    const url = name.replace(/\.parquet$/i, '.index.parquet')
-    asyncBufferFactory({ url })
-      .then(buffer => parquetMetadataAsync(buffer))
-      .then(setIndexMetadata)
+    asyncBufferFactory({ url: indexUrl })
+      .then(async buffer => {
+        setIndexByteLength(buffer.byteLength)
+        setIndexMetadata(await parquetMetadataAsync(buffer))
+      })
       .catch(setError)
-  }, [name, setError])
+  }, [indexUrl, setError])
 
   const renderCellContent = useCallback(({ cell, stringify }: CellContentProps) => {
     const value: unknown = cell?.value
@@ -139,31 +146,35 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
 
   return <>
     <div className='top-header'>
-      {name}
-    </div>
-    <div className='view-header'>
-      {byteLength !== undefined && <span title={byteLength.toLocaleString() + ' bytes'}>{formatFileSize(byteLength)}</span>}
-      <span>{df.numRows.toLocaleString()} rows</span>
-      <div className="spacer">
-        {displayQueryTime !== undefined && <span>query time: {displayQueryTime.toFixed(0)} ms</span>}
-        {displayFirstRowTime !== undefined && <span>first result: {displayFirstRowTime.toFixed(0)} ms</span>}
-        <input
-          type="text"
-          placeholder="Search..."
-          onChange={e => { setQuery(e.target.value) }}
-          value={query}
-          style={{ padding: '2px 10px', marginLeft: 'auto', height: '24px' }}
-        />
+      <span className='top-header-name'>{name}</span>
+      <div className='top-stats'>
+        {byteLength !== undefined && <span title={byteLength.toLocaleString() + ' bytes'}>{formatFileSize(byteLength)}</span>}
+        <span>{df.numRows.toLocaleString()} rows</span>
+      </div>
+      <div className='download-bars'>
+        <DownloadBar label='source' downloaded={sourceDownloaded} total={byteLength} />
+        <DownloadBar label='index' downloaded={indexDownloaded} total={indexByteLength} />
       </div>
     </div>
-    {!query && <div className='examples-row'>
+    <div className='examples-row'>
+      <input
+        className='search-input'
+        type="text"
+        placeholder="Search..."
+        onChange={e => { setQuery(e.target.value) }}
+        value={query}
+      />
+      <div className='query-times'>
+        {displayFirstRowTime !== undefined && <span>first result: {displayFirstRowTime.toFixed(0)} ms</span>}
+        {displayQueryTime !== undefined && <span>query time: {displayQueryTime.toFixed(0)} ms</span>}
+      </div>
       <span className='examples-label'>Try:</span>
       <div className='examples'>
         {exampleQueries.map(example =>
           <button key={example} className='example-chip' onClick={() => { setQuery(example) }}>{example}</button>,
         )}
       </div>
-    </div>}
+    </div>
     <HighTable
       focus={false}
       cacheKey={name}
@@ -174,6 +185,33 @@ export default function Page({ df, name, byteLength, setError }: PageProps): Rea
       renderCellContent={renderCellContent}
     />
   </>
+}
+
+interface DownloadBarProps {
+  label: string
+  downloaded: number
+  total?: number
+}
+
+/**
+ * Progress bar showing how many bytes of a file have been downloaded.
+ *
+ * @param {DownloadBarProps} props
+ * @returns {ReactNode}
+ */
+function DownloadBar({ label, downloaded, total }: DownloadBarProps): ReactNode {
+  const fraction = total ? Math.min(1, downloaded / total) : 0
+  const percent = (100 * fraction).toFixed(fraction < 0.1 ? 2 : 1)
+  const title = `${downloaded.toLocaleString()} of ${total?.toLocaleString() ?? '?'} bytes downloaded (${percent}%)`
+  return <div className='download-bar' title={title}>
+    <span className='download-label'>{label}</span>
+    <div className='download-track' role='progressbar'>
+      <div className='download-fill' style={{ width: `${100 * fraction}%` }} />
+    </div>
+    <span className='download-bytes'>
+      {formatFileSize(downloaded)} / {total === undefined ? '?' : formatFileSize(total)}
+    </span>
+  </div>
 }
 
 /**

@@ -4,7 +4,10 @@ import 'hyperparam/hyperparam.css'
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.js'
+import { trackDownloads } from './downloads.js'
 import './index.css'
+
+trackDownloads()
 
 const app = document.getElementById('app')
 if (!app) throw new Error('missing app element')
